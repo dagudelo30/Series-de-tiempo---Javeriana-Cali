@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Curso de Series de Tiempo — Python">
+    <title>Suavización Exponencial de Holt-Winters en Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --bg: #fdfbf7;
+            --bg-alt: #f5f0e8;
+            --text: #2c2c2c;
+            --text-muted: #6b6560;
+            --accent: #b8540c;
+            --accent-light: #e8a86d;
+            --accent-bg: #fef6ee;
+            --code-bg: #1e1e2e;
+            --code-text: #cdd6f4;
+            --code-comment: #6c7086;
+            --code-keyword: #cba6f7;
+            --code-string: #a6e3a1;
+            --code-function: #89b4fa;
+            --code-number: #fab387;
+            --border: #e0d8ce;
+            --shadow: rgba(44, 44, 44, 0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Source Sans 3', Georgia, serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.78; font-size: 17.5px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .page-wrapper { max-width: 860px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .page-header { border-bottom: 3px solid var(--accent); padding-bottom: 2rem; margin-bottom: 3rem; position: relative; }
+        .page-header::after { content: ''; position: absolute; bottom: -3px; left: 0; width: 120px; height: 3px; background: var(--accent-light); }
+        .breadcrumb { font-size: 0.82rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 2.5rem; font-weight: 700; line-height: 1.15; margin-bottom: 0.6rem; }
+        h1 em { font-style: italic; color: var(--accent); }
+        .subtitle { font-size: 1.12rem; color: var(--text-muted); font-weight: 300; max-width: 620px; }
+        .meta-line { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem; }
+        .meta-line a { color: var(--accent); text-decoration: none; }
+        h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 700; margin-top: 2.8rem; margin-bottom: 1rem; padding-left: 1rem; border-left: 4px solid var(--accent); }
+        h3 { font-family: 'Source Sans 3', sans-serif; font-size: 1.15rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1.1rem; }
+        strong { font-weight: 600; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.88em; background: var(--bg-alt); padding: 0.15em 0.4em; border-radius: 4px; }
+        .callout { background: var(--accent-bg); border-left: 4px solid var(--accent); padding: 1.2rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
+        .callout-title { font-weight: 700; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.4rem; }
+        .callout p:last-child { margin-bottom: 0; }
+        .callout.info { background: #eef4fb; border-left-color: #4a7fb5; }
+        .callout.info .callout-title { color: #4a7fb5; }
+        .callout.warn { background: #fef9ee; border-left-color: #c9960c; }
+        .callout.warn .callout-title { color: #a07b0a; }
+        .math-block { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 1.3rem 1.8rem; margin: 1.5rem 0; overflow-x: auto; }
+        .math-label { font-family: 'Source Sans 3', sans-serif; font-weight: 600; color: var(--accent); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; margin-top: 0.6rem; }
+        .math-label:first-child { margin-top: 0; }
+        .code-block { background: var(--code-bg); border-radius: 10px; margin: 1.5rem 0; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+        .code-header { background: #181825; padding: 0.55rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid #313244; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.r { background: #f38ba8; } .dot.y { background: #f9e2af; } .dot.g { background: #a6e3a1; }
+        .code-lang { margin-left: auto; font-size: 0.73rem; color: var(--code-comment); font-family: 'Fira Code', monospace; letter-spacing: 0.05em; }
+        .code-block pre { padding: 1.1rem 1.4rem; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.86rem; line-height: 1.7; color: var(--code-text); white-space: pre; margin: 0; }
+        .cm { color: #6c7086; font-style: italic; } .kw { color: #cba6f7; } .st { color: #a6e3a1; }
+        .fn { color: #89b4fa; } .nb { color: #fab387; } .op { color: #89dceb; }
+        .output-block { background: #f8f8f5; border: 1px solid var(--border); border-radius: 0 0 8px 8px; padding: 0.9rem 1.3rem; margin: -0.8rem 0 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.55; color: var(--text-muted); overflow-x: auto; border-top: 2px dashed var(--border); white-space: pre; }
+        .output-label { font-family: 'Source Sans 3', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; display: block; font-weight: 600; white-space: normal; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.93rem; }
+        thead th { background: var(--accent); color: #fff; font-weight: 600; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.86rem; }
+        thead th:first-child { border-radius: 8px 0 0 0; } thead th:last-child { border-radius: 0 8px 0 0; }
+        tbody td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); }
+        tbody tr:hover { background: var(--accent-bg); }
+        .best-row { background: #eef9ee; font-weight: 600; }
+        .references { margin-top: 3rem; padding-top: 2rem; border-top: 2px solid var(--border); }
+        .references h2 { border-left: none; padding-left: 0; font-size: 1.35rem; }
+        .ref-list { list-style: none; padding: 0; }
+        .ref-list li { padding: 0.45rem 0 0.45rem 1.5rem; position: relative; font-size: 0.91rem; line-height: 1.55; color: var(--text-muted); }
+        .ref-list li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+        .ref-list a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-light); }
+        .ref-list a:hover { border-bottom-style: solid; }
+        .page-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted); text-align: center; }
+        @media (max-width: 640px) {
+            body { font-size: 16px; } .page-wrapper { padding: 1.2rem 1rem 3rem; }
+            h1 { font-size: 1.8rem; } h2 { font-size: 1.3rem; }
+            .code-block pre { font-size: 0.78rem; padding: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="breadcrumb">Series de Tiempo · Módulo 2 · Métodos de Suavizamiento</div>
+        <h1>Suavización Exponencial de <em>Holt-Winters</em></h1>
+        <p class="subtitle">Del suavizamiento simple al triple: capturando nivel, tendencia y estacionalidad con Python</p>
+        <p class="meta-line">
+            Datos: Tasa de desempleo mensual — 13 ciudades principales de Colombia (Ene 2001 – Jun 2019) ·
+            <a href="https://github.com/profedaniel86/Series_de_Tiempo" target="_blank">Repositorio del curso</a>
+        </p>
+    </header>
+
+    <!-- ═══ 1 ═══ -->
+    <h2>1. Contexto: De la suavización simple a Holt-Winters</h2>
+
+    <p>Los métodos de suavizamiento exponencial fueron desarrollados durante la década de 1950 (Brown, 1959). Los pronósticos que producen son promedios ponderados de observaciones pasadas, donde los pesos decaen exponencialmente: cuanto más reciente sea la observación, mayor será el peso asignado.</p>
+
+    <p>El método de <strong>Suavización Exponencial Simple (SES)</strong> genera un pronóstico "plano" que ignora tendencia y estacionalidad. <strong>Charles Holt</strong> (1957) lo extendió para incluir tendencia (suavización doble). <strong>Peter Winters</strong> (1960) agregó la estacionalidad, dando origen al método de <strong>Holt-Winters</strong> o suavización exponencial triple.</p>
+
+    <div class="callout">
+        <div class="callout-title">Idea clave</div>
+        <p>Holt-Winters comprende una ecuación de pronóstico y <strong>tres ecuaciones de suavizado</strong>: una para el nivel (ℓ), una para la tendencia (b) y una para el componente estacional (s). Esto implica tres parámetros: α, β* y γ, que se estiman minimizando la SSE in-sample.</p>
+    </div>
+
+    <!-- ═══ 2 ═══ -->
+    <h2>2. Holt-Winters Aditivo</h2>
+
+    <p>Se recomienda cuando las variaciones estacionales son aproximadamente <strong>constantes</strong> a lo largo de la serie. El componente estacional se expresa en términos absolutos y dentro de cada ciclo se suman aproximadamente a cero.</p>
+
+    <div class="math-block">
+        <span class="math-label">Ecuación de pronóstico:</span>
+        $$\hat{y}_{t+h|t} = \ell_t + h \cdot b_t + s_{t+h-m(k+1)}$$
+        <span class="math-label">Ecuación de nivel:</span>
+        $$\ell_t = \alpha(y_t - s_{t-m}) + (1 - \alpha)(\ell_{t-1} + b_{t-1})$$
+        <span class="math-label">Ecuación de tendencia:</span>
+        $$b_t = \beta^*(\ell_t - \ell_{t-1}) + (1 - \beta^*)b_{t-1}$$
+        <span class="math-label">Ecuación estacional:</span>
+        $$s_t = \gamma(y_t - \ell_{t-1} - b_{t-1}) + (1 - \gamma)s_{t-m}$$
+    </div>
+
+    <p>Donde $k$ es la parte entera de $(h-1)/m$ y $m$ es el periodo estacional ($m=12$ para datos mensuales). La ecuación de nivel pondera la observación ajustada estacionalmente $(y_t - s_{t-m})$ con el pronóstico no estacional $\ell_{t-1} + b_{t-1}$.</p>
+
+    <!-- ═══ 3 ═══ -->
+    <h2>3. Holt-Winters Multiplicativo</h2>
+
+    <p>Se emplea cuando las variaciones estacionales cambian <strong>proporcionalmente</strong> al nivel de la serie. El componente estacional se expresa en términos relativos (porcentajes).</p>
+
+    <div class="math-block">
+        <span class="math-label">Ecuación de pronóstico:</span>
+        $$\hat{y}_{t+h|t} = (\ell_t + h \cdot b_t) \cdot s_{t+h-m(k+1)}$$
+        <span class="math-label">Ecuación de nivel:</span>
+        $$\ell_t = \alpha \frac{y_t}{s_{t-m}} + (1 - \alpha)(\ell_{t-1} + b_{t-1})$$
+        <span class="math-label">Ecuación de tendencia:</span>
+        $$b_t = \beta^*(\ell_t - \ell_{t-1}) + (1 - \beta^*)b_{t-1}$$
+        <span class="math-label">Ecuación estacional:</span>
+        $$s_t = \gamma \frac{y_t}{\ell_{t-1} + b_{t-1}} + (1 - \gamma)s_{t-m}$$
+    </div>
+
+    <div class="callout info">
+        <div class="callout-title">¿Cuándo usar cada uno?</div>
+        <p>Si los "picos y valles" estacionales mantienen una amplitud constante → <strong>aditivo</strong>. Si la amplitud crece con el nivel → <strong>multiplicativo</strong>. En la práctica es común estimar ambos y comparar el RMSE fuera de muestra (Alonso, 2020).</p>
+    </div>
+
+    <!-- ═══ 4 ═══ -->
+    <h2>4. Implementación en Python</h2>
+
+    <p>Trabajamos con la <strong>tasa de desempleo mensual de las 13 principales ciudades de Colombia</strong> (<code>datosEmpleo.xlsx</code>), la misma serie del libro de Alonso (2020) y de las notebooks del curso. Usamos <code>ETSModel</code> de <code>statsmodels</code> que implementa el marco ETS completo con intervalos de confianza.</p>
+
+    <h3>4.1 Carga de paquetes y datos</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> matplotlib <span class="kw">import</span> pyplot <span class="kw">as</span> plt
+<span class="kw">from</span> statsmodels.tsa.seasonal <span class="kw">import</span> seasonal_decompose
+<span class="kw">from</span> statsmodels.tsa.holtwinters <span class="kw">import</span> SimpleExpSmoothing
+<span class="kw">from</span> statsmodels.tsa.holtwinters <span class="kw">import</span> ExponentialSmoothing
+<span class="kw">from</span> statsmodels.tsa.exponential_smoothing.ets <span class="kw">import</span> ETSModel
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> mean_squared_error
+
+<span class="cm"># Cargar datos de empleo</span>
+data = pd.<span class="fn">read_excel</span>(
+    <span class="st">"datosEmpleo.xlsx"</span>,
+    index_col=<span class="st">'mes'</span>,
+    parse_dates=<span class="kw">True</span>
+)
+<span class="fn">print</span>(data.shape)
+data.<span class="fn">head</span>()</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+(222, 4)
+            TD_13ciudades  Ocupados  Desocupados  Inactivos
+mes
+2001-01-01      20.946380  6923.604     1834.507   4600.718
+2001-02-01      19.894213  7037.746     1747.820   4596.805
+2001-03-01      19.221565  6945.973     1652.823   4807.120
+2001-04-01      17.888575  6973.079     1519.137   4937.280
+2001-05-01      17.945654  6994.462     1529.720   4928.911</div>
+
+    <h3>4.2 División en muestra de entrenamiento y evaluación</h3>
+
+    <p>Guardamos los últimos 14 meses como muestra de evaluación (out-of-sample). Las primeras 208 observaciones (Ene 2001 – Abr 2018) constituyen la muestra de entrenamiento.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>train_len = <span class="nb">208</span>
+train_td = data[[<span class="st">"TD_13ciudades"</span>]][:train_len]
+test_td  = data[[<span class="st">"TD_13ciudades"</span>]][train_len:]
+
+fig = plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">6</span>))
+plt.<span class="fn">plot</span>(train_td, label=<span class="st">"Datos Entrenamiento"</span>)
+plt.<span class="fn">plot</span>(test_td,  label=<span class="st">"Datos de Prueba"</span>)
+plt.<span class="fn">legend</span>()
+plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <div class="callout warn">
+        <div class="callout-title">Muestra de entrenamiento y evaluación</div>
+        <p>Es fundamental evaluar los modelos <strong>fuera de muestra</strong>. El RMSE in-sample mide ajuste a datos conocidos; lo que importa es la capacidad de extrapolación. Por eso separamos los últimos periodos (Alonso, 2020, Cap. 3).</p>
+    </div>
+
+    <h3>4.3 Modelo Holt-Winters Aditivo</h3>
+
+    <p>Usamos <code>ETSModel</code> con <code>error="add"</code>, <code>trend="add"</code> y <code>seasonal="add"</code>. La función <code>fit()</code> estima α, β* y γ minimizando la SSE. Generamos pronósticos con intervalos de confianza al 95%.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># ── Modelo Holt-Winters ADITIVO ──</span>
+ets_model = <span class="fn">ETSModel</span>(
+    endog=train_td[<span class="st">"TD_13ciudades"</span>],
+    error=<span class="st">"add"</span>, trend=<span class="st">"add"</span>, seasonal=<span class="st">"add"</span>
+)
+ets_result = ets_model.<span class="fn">fit</span>()
+
+<span class="cm"># Pronósticos para 14 periodos</span>
+point_forecast = ets_result.<span class="fn">forecast</span>(<span class="nb">14</span>)
+
+<span class="cm"># Intervalos de confianza al 95%</span>
+ci = ets_result.<span class="fn">get_prediction</span>(
+    start=point_forecast.index[<span class="nb">0</span>],
+    end=point_forecast.index[-<span class="nb">1</span>]
+)
+conf_forecast = ci.<span class="fn">pred_int</span>(alpha=<span class="nb">0.05</span>)
+limits = ci.predicted_mean
+
+preds_hw_add = pd.<span class="fn">concat</span>([limits, conf_forecast], axis=<span class="nb">1</span>)
+preds_hw_add.columns = [<span class="st">'Point_forecast'</span>, <span class="st">'lower_95'</span>, <span class="st">'upper_95'</span>]
+<span class="fn">print</span>(preds_hw_add)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — Pronósticos H-W Aditivo</span>
+            Point_forecast   lower_95   upper_95
+2018-05-01       10.297371   9.251559  11.343182
+2018-06-01       10.674320   9.532331  11.816309
+2018-07-01       10.565094   9.334404  11.795784
+2018-08-01       10.226583   8.913153  11.540013
+2018-09-01        9.946362   8.555089  11.337635
+2018-10-01        9.282618   7.817618  10.747619
+2018-11-01        8.875130   7.339925  10.410335
+2018-12-01        9.376549   7.774200  10.978899
+2019-01-01       12.534217  10.867413  14.201020
+2019-02-01       11.235571   9.506536  12.964607
+2019-03-01       10.500709   8.712138  12.289280
+2019-04-01       10.193547   8.347920  12.039175</div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Parámetros estimados y RMSE</span>
+<span class="fn">print</span>(ets_result.alpha, ets_result.beta, ets_result.gamma)
+
+rmse_hw_add = np.<span class="fn">sqrt</span>(<span class="fn">mean_squared_error</span>(
+    test_td, preds_hw_add[<span class="st">'Point_forecast'</span>]
+))
+<span class="fn">print</span>(rmse_hw_add)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+α = 0.43857   β* = 4.3857e-05   γ = 5.6143e-05
+
+RMSE out-of-sample: 0.9894</div>
+
+    <h3>4.4 Modelo Holt-Winters Multiplicativo</h3>
+
+    <p>Para esta serie, el modelo multiplicativo se especifica con <code>error="add"</code>, <code>trend=None</code> y <code>seasonal="mul"</code>. Es un modelo sin tendencia explícita pero con estacionalidad multiplicativa — a veces se ajusta mejor cuando la tendencia es débil.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># ── Modelo Holt-Winters MULTIPLICATIVO ──</span>
+ets_model = <span class="fn">ETSModel</span>(
+    endog=train_td[<span class="st">"TD_13ciudades"</span>],
+    error=<span class="st">"add"</span>, trend=<span class="kw">None</span>, seasonal=<span class="st">"mul"</span>
+)
+ets_result = ets_model.<span class="fn">fit</span>()
+
+<span class="cm"># Pronósticos con intervalos de confianza</span>
+point_forecast = ets_result.<span class="fn">forecast</span>(<span class="nb">14</span>)
+ci = ets_result.<span class="fn">get_prediction</span>(
+    start=point_forecast.index[<span class="nb">0</span>],
+    end=point_forecast.index[-<span class="nb">1</span>]
+)
+conf_forecast = ci.<span class="fn">pred_int</span>(alpha=<span class="nb">0.05</span>)
+limits = ci.predicted_mean
+
+preds_hw_mul = pd.<span class="fn">concat</span>([limits, conf_forecast], axis=<span class="nb">1</span>)
+preds_hw_mul.columns = [<span class="st">'Point_forecast'</span>, <span class="st">'lower_95'</span>, <span class="st">'upper_95'</span>]
+<span class="fn">print</span>(preds_hw_mul)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — Pronósticos H-W Multiplicativo</span>
+            Point_forecast   lower_95   upper_95
+2018-05-01       10.433036   9.323064  11.493497
+2018-06-01       10.981856   9.772964  12.175667
+2018-07-01       10.779516   9.488432  12.054928
+2018-08-01       10.380956   8.962901  11.735001
+2018-09-01       10.300534   8.734702  11.629347
+2018-10-01        9.708898   8.236323  11.157064
+2018-11-01        9.565507   7.947423  11.036163
+2018-12-01       10.265134   8.642286  12.029222
+2019-01-01       13.399531  11.338424  15.380831
+2019-02-01       11.500067   9.711458  13.408455</div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Parámetros estimados y RMSE</span>
+<span class="fn">print</span>(ets_result.alpha, ets_result.gamma)
+
+rmse_hw_mul = np.<span class="fn">sqrt</span>(<span class="fn">mean_squared_error</span>(
+    test_td, preds_hw_mul[<span class="st">'Point_forecast'</span>]
+))
+<span class="fn">print</span>(rmse_hw_mul)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+α = 0.43150   γ = 0.16097
+
+RMSE out-of-sample: 0.6012</div>
+
+    <h3>4.5 Visualización de los pronósticos</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>fig = plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">6</span>))
+plt.<span class="fn">plot</span>(train_td, label=<span class="st">"Datos Entrenamiento"</span>)
+plt.<span class="fn">plot</span>(preds_hw_mul[<span class="st">'Point_forecast'</span>],
+       label=<span class="st">"Suavización Exponencial (Holt-Winters) Multiplicativo"</span>)
+plt.<span class="fn">fill_between</span>(
+    preds_hw_mul.index,
+    preds_hw_mul[<span class="st">'lower_95'</span>],
+    preds_hw_mul[<span class="st">'upper_95'</span>],
+    color=<span class="st">'blue'</span>, alpha=<span class="nb">0.1</span>
+)
+plt.<span class="fn">legend</span>()
+plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <!-- ═══ 5 ═══ -->
+    <h2>5. Comparación de todos los métodos de suavizamiento</h2>
+
+    <p>Comparamos todos los métodos evaluados en la notebook del curso. El RMSE se calcula sobre los 14 periodos de la muestra de evaluación (May 2018 – Jun 2019):</p>
+
+    <table>
+        <thead>
+            <tr><th>Método</th><th>Especificación ETS</th><th>Parámetros estimados</th><th>RMSE (test)</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Promedio Móvil (k=3)</td>
+                <td>—</td>
+                <td>k = 3</td>
+                <td>1.0793</td>
+            </tr>
+            <tr>
+                <td>SES</td>
+                <td>ETS(A, N, N)</td>
+                <td>α = 0.3597</td>
+                <td>1.0533</td>
+            </tr>
+            <tr>
+                <td>Holt</td>
+                <td>ETS(M, M, N)</td>
+                <td>α = 0.1715, β = 1.72e-05</td>
+                <td>1.2281</td>
+            </tr>
+            <tr>
+                <td>H-W Aditivo</td>
+                <td>ETS(A, A, A)</td>
+                <td>α = 0.4386, β = 4.39e-05, γ = 5.61e-05</td>
+                <td>0.9894</td>
+            </tr>
+            <tr class="best-row">
+                <td>H-W Multiplicativo</td>
+                <td>ETS(A, N, M)</td>
+                <td>α = 0.4315, γ = 0.1610</td>
+                <td>0.6012</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <div class="callout-title">Resultado</div>
+        <p>El modelo <strong>ETS(A, N, M)</strong> — error aditivo, sin tendencia, estacionalidad multiplicativa — obtiene el menor RMSE fuera de muestra (<strong>0.6012</strong>), superando ampliamente a todos los demás métodos para la tasa de desempleo.</p>
+    </div>
+
+    <!-- ═══ 6 ═══ -->
+    <h2>6. Modelo final con todos los datos</h2>
+
+    <p>Una vez seleccionado el mejor modelo, se re-estima usando <strong>toda</strong> la muestra (222 observaciones). Se pueden fijar los hiperparámetros obtenidos en la validación usando <code>fit_constrained</code>:</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Modelo final con TODOS los datos (ejemplo con aditivo)</span>
+final_model = <span class="fn">ETSModel</span>(
+    endog=data[<span class="st">"TD_13ciudades"</span>],
+    error=<span class="st">"add"</span>, trend=<span class="st">"add"</span>, seasonal=<span class="st">"add"</span>
+)
+
+<span class="cm"># Fijar hiperparámetros del modelo validado</span>
+final_fit = final_model.<span class="fn">fit_constrained</span>({
+    <span class="st">'smoothing_level'</span>:    <span class="nb">0.4385291272708879</span>,
+    <span class="st">'smoothing_trend'</span>:    <span class="nb">4.3852912727088794e-05</span>,
+    <span class="st">'smoothing_seasonal'</span>: <span class="nb">5.614708727291121e-05</span>
+})
+
+<span class="fn">print</span>(<span class="st">f"α: </span>{final_fit.alpha}<span class="st">"</span>)
+<span class="fn">print</span>(<span class="st">f"β: </span>{final_fit.beta}<span class="st">"</span>)
+<span class="fn">print</span>(<span class="st">f"γ: </span>{final_fit.gamma}<span class="st">"</span>)
+
+<span class="cm"># Pronósticos futuros</span>
+pronosticos = final_fit.<span class="fn">forecast</span>(<span class="nb">12</span>)
+<span class="fn">print</span>(pronosticos)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+α: 0.4385291272708879
+β: 4.3852912727088794e-05
+γ: 5.614708727291121e-05</div>
+
+    <!-- ═══ 7 ═══ -->
+    <h2>7. Limitaciones del método</h2>
+
+    <p><strong>Estacionalidad multiplicativa con valores bajos:</strong> Cuando la serie tiene periodos cercanos a cero, el componente multiplicativo genera inestabilidades. Un valor de 10 y otro de 1 tienen una diferencia relativa de ~1000%, distorsionando los índices estacionales.</p>
+
+    <p><strong>Supuesto de patrones estables:</strong> Asume que los patrones históricos se mantendrán. Cambios estructurales o eventos extraordinarios (como una pandemia) invalidan los pronósticos.</p>
+
+    <p><strong>No captura relaciones causales:</strong> Como señala Alonso (2020, Cap. 3): "si bien podemos encontrar un buen pronóstico, el modelo no permitirá dar una explicación del por qué el valor pronosticado es obtenido". Para relaciones causales se necesitan modelos de regresión o VAR.</p>
+
+    <p><strong>Selección de especificación:</strong> En la tabla, el mejor modelo usa <code>trend=None</code>. La "mejor" especificación no siempre incluye todos los componentes — la selección debe ser empírica, guiada por el RMSE fuera de muestra.</p>
+
+    <!-- ═══ 8 ═══ -->
+    <h2>8. Conclusión</h2>
+
+    <p>Holt-Winters sigue siendo una herramienta fundamental para el científico de datos. Su fortaleza reside en su sencillez — tres ecuaciones de suavizado para nivel, tendencia y estacionalidad — y en pronósticos competitivos con relativamente poca información.</p>
+
+    <p>En Python, <code>ETSModel</code> de <code>statsmodels</code> permite ajustar todas las variantes del marco ETS con optimización automática e intervalos de confianza. La evaluación siempre debe hacerse fuera de muestra, comparando contra una batería de modelos antes de decidir.</p>
+
+    <div class="callout">
+        <div class="callout-title">Ejercicio propuesto</div>
+        <p>Empleando la información del <strong>número de ocupados</strong> en miles de personas (<code>Ocupados</code>) para las 13 principales ciudades de Colombia del archivo <code>datosEmpleo.xlsx</code>, encuentre el mejor pronóstico para los próximos 6 meses. Escriba un breve informe de máximo una página explicando cómo llega a sus proyecciones y cuáles serían las limitaciones.</p>
+    </div>
+
+    <!-- ═══ REFS ═══ -->
+    <div class="references">
+        <h2>Referencias</h2>
+        <ul class="ref-list">
+            <li>Alonso, J. C. (2020). <em>Introducción a los pronósticos con modelos estadístico de series de tiempo para científico de datos (en R)</em>. Primera versión. Universidad Icesi, Cali.</li>
+            <li>Brown, R. G. (1959). <em>Statistical forecasting for inventory control</em>. McGraw-Hill.</li>
+            <li>Holt, C. (1957). Forecasting seasonals and trends by exponentially weighted moving averages. ONR Memorandum (Vol. 52). Carnegie Institute of Technology.</li>
+            <li>Winters, P. R. (1960). Forecasting sales by exponentially weighted moving averages. <em>Management Science</em>, 6(3), 324–342.</li>
+            <li>Hyndman, R. J. &amp; Athanasopoulos, G. (2021). <em>Forecasting: Principles and Practice</em> (3rd ed). OTexts. <a href="https://otexts.com/fpp3/">otexts.com/fpp3</a></li>
+            <li>Hyndman, R. J. et al. (2025). <em>Forecasting: Principles and Practice, the Pythonic Way</em>. OTexts. <a href="https://otexts.com/fpppy/">otexts.com/fpppy</a></li>
+            <li>Statsmodels. <em>ETS Models — Exponential Smoothing</em>. <a href="https://www.statsmodels.org/stable/exponential_smoothing.html">statsmodels.org</a></li>
+            <li>Repositorio del curso: <a href="https://github.com/profedaniel86/Series_de_Tiempo">github.com/profedaniel86/Series_de_Tiempo</a></li>
+        </ul>
+    </div>
+
+    <footer class="page-footer">
+        Curso de Series de Tiempo · Universidad Javeriana-Cali · Implementación en Python con <code>statsmodels.ETSModel</code>
+    </footer>
+
+</div>
+</body>
+</html>
