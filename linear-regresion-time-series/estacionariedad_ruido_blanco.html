@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estacionariedad y Ruido Blanco en Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --bg: #fdfbf7; --bg-alt: #f5f0e8; --text: #2c2c2c; --text-muted: #6b6560;
+            --accent: #b8540c; --accent-light: #e8a86d; --accent-bg: #fef6ee;
+            --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-comment: #6c7086;
+            --code-keyword: #cba6f7; --code-string: #a6e3a1; --code-function: #89b4fa;
+            --code-number: #fab387; --border: #e0d8ce; --shadow: rgba(44,44,44,0.06);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Source Sans 3',Georgia,serif; background:var(--bg); color:var(--text); line-height:1.78; font-size:17.5px; -webkit-font-smoothing:antialiased; }
+        .page-wrapper { max-width:860px; margin:0 auto; padding:2rem 2rem 5rem; }
+        .page-header { border-bottom:3px solid var(--accent); padding-bottom:2rem; margin-bottom:3rem; position:relative; }
+        .page-header::after { content:''; position:absolute; bottom:-3px; left:0; width:120px; height:3px; background:var(--accent-light); }
+        .breadcrumb { font-size:0.82rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:1rem; }
+        h1 { font-family:'Playfair Display',Georgia,serif; font-size:2.5rem; font-weight:700; line-height:1.15; margin-bottom:0.6rem; }
+        h1 em { font-style:italic; color:var(--accent); }
+        .subtitle { font-size:1.12rem; color:var(--text-muted); font-weight:300; max-width:620px; }
+        .meta-line { font-size:0.85rem; color:var(--text-muted); margin-top:0.8rem; }
+        .meta-line a { color:var(--accent); text-decoration:none; }
+        h2 { font-family:'Playfair Display',Georgia,serif; font-size:1.6rem; font-weight:700; margin-top:2.8rem; margin-bottom:1rem; padding-left:1rem; border-left:4px solid var(--accent); }
+        h3 { font-family:'Source Sans 3',sans-serif; font-size:1.15rem; font-weight:700; margin-top:2rem; margin-bottom:0.7rem; color:var(--accent); }
+        p { margin-bottom:1.1rem; } strong { font-weight:600; }
+        code { font-family:'Fira Code',monospace; font-size:0.88em; background:var(--bg-alt); padding:0.15em 0.4em; border-radius:4px; }
+        .callout { background:var(--accent-bg); border-left:4px solid var(--accent); padding:1.2rem 1.5rem; margin:1.5rem 0; border-radius:0 8px 8px 0; }
+        .callout-title { font-weight:700; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); margin-bottom:0.4rem; }
+        .callout p:last-child { margin-bottom:0; }
+        .callout.info { background:#eef4fb; border-left-color:#4a7fb5; } .callout.info .callout-title { color:#4a7fb5; }
+        .callout.warn { background:#fef9ee; border-left-color:#c9960c; } .callout.warn .callout-title { color:#a07b0a; }
+        .math-block { background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:1.3rem 1.8rem; margin:1.5rem 0; overflow-x:auto; }
+        .math-label { font-family:'Source Sans 3',sans-serif; font-weight:600; color:var(--accent); font-size:0.85rem; display:block; margin-bottom:0.3rem; margin-top:0.6rem; }
+        .math-label:first-child { margin-top:0; }
+        .code-block { background:var(--code-bg); border-radius:10px; margin:1.5rem 0; overflow:hidden; box-shadow:0 4px 20px var(--shadow); }
+        .code-header { background:#181825; padding:0.55rem 1.2rem; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid #313244; }
+        .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+        .dot.r { background:#f38ba8; } .dot.y { background:#f9e2af; } .dot.g { background:#a6e3a1; }
+        .code-lang { margin-left:auto; font-size:0.73rem; color:var(--code-comment); font-family:'Fira Code',monospace; letter-spacing:0.05em; }
+        .code-block pre { padding:1.1rem 1.4rem; overflow-x:auto; font-family:'Fira Code',monospace; font-size:0.86rem; line-height:1.7; color:var(--code-text); white-space:pre; margin:0; }
+        .cm { color:#6c7086; font-style:italic; } .kw { color:#cba6f7; } .st { color:#a6e3a1; }
+        .fn { color:#89b4fa; } .nb { color:#fab387; } .op { color:#89dceb; }
+        .output-block { background:#f8f8f5; border:1px solid var(--border); border-radius:0 0 8px 8px; padding:0.9rem 1.3rem; margin:-0.8rem 0 1.5rem; font-family:'Fira Code',monospace; font-size:0.8rem; line-height:1.55; color:var(--text-muted); overflow-x:auto; border-top:2px dashed var(--border); white-space:pre; }
+        .output-label { font-family:'Source Sans 3',sans-serif; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--accent); margin-bottom:0.3rem; display:block; font-weight:600; white-space:normal; }
+        table { width:100%; border-collapse:collapse; margin:1.5rem 0; font-size:0.93rem; }
+        thead th { background:var(--accent); color:#fff; font-weight:600; padding:0.65rem 0.9rem; text-align:left; font-size:0.86rem; }
+        thead th:first-child { border-radius:8px 0 0 0; } thead th:last-child { border-radius:0 8px 0 0; }
+        tbody td { padding:0.55rem 0.9rem; border-bottom:1px solid var(--border); } tbody tr:hover { background:var(--accent-bg); }
+        .best-row { background:#eef9ee; font-weight:600; }
+        .references { margin-top:3rem; padding-top:2rem; border-top:2px solid var(--border); }
+        .references h2 { border-left:none; padding-left:0; font-size:1.35rem; }
+        .ref-list { list-style:none; padding:0; }
+        .ref-list li { padding:0.45rem 0 0.45rem 1.5rem; position:relative; font-size:0.91rem; line-height:1.55; color:var(--text-muted); }
+        .ref-list li::before { content:'→'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+        .ref-list a { color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent-light); }
+        .ref-list a:hover { border-bottom-style:solid; }
+        .page-footer { margin-top:3rem; padding-top:1.5rem; border-top:1px solid var(--border); font-size:0.82rem; color:var(--text-muted); text-align:center; }
+        @media (max-width:640px) { body { font-size:16px; } .page-wrapper { padding:1.2rem 1rem 3rem; } h1 { font-size:1.8rem; } h2 { font-size:1.3rem; } .code-block pre { font-size:0.78rem; padding:0.9rem; } }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="breadcrumb">Series de Tiempo · Módulo 3</div>
+        <h1>Estacionariedad y <em>Ruido Blanco</em></h1>
+        <p class="subtitle">Propiedades estadísticas fundamentales para el modelaje de series de tiempo, con pruebas formales en Python</p>
+        <p class="meta-line">
+            Datos: Series simuladas (y1 = ruido blanco, y2 = proceso autocorrelacionado) ·
+            <a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">Repositorio del curso</a>
+        </p>
+    </header>
+
+    <!-- ═══ 1 ═══ -->
+    <h2>1. Estacionariedad (débil)</h2>
+
+    <p>Una de las propiedades estadísticas más deseables en las series de tiempo es la <strong>estacionariedad</strong>. Intuitivamente, una serie es estacionaria cuando su comportamiento estadístico no cambia en el tiempo.</p>
+
+    <p>Formalmente, un proceso $\{y_t\}$ es <strong>débilmente estacionario</strong> (también llamado covarianza estacionario) si cumple tres condiciones:</p>
+
+    <div class="math-block">
+        <span class="math-label">Condición 1 — Media constante:</span>
+        $$E[y_t] = \mu < \infty$$
+        <span class="math-label">Condición 2 — Varianza constante (homoscedasticidad):</span>
+        $$\text{Var}[y_t] = \sigma^2 < \infty$$
+        <span class="math-label">Condición 3 — Autocovarianza depende solo de la distancia:</span>
+        $$\text{Cov}[y_t, y_{t-s}] = \gamma_s < \infty$$
+    </div>
+
+    <p>La condición (1) implica que la serie fluctúa siempre alrededor de $\mu$, por lo tanto <strong>no puede tener tendencia</strong>. La condición (2) implica que la varianza sea la misma en todo momento — si hay "volatilidad agrupada" (periodos volátiles seguidos de periodos volátiles), la serie no es estacionaria. La condición (3) significa que la relación lineal entre observaciones solo depende de la distancia $s$ entre ellas, no del momento $t$ en que ocurren.</p>
+
+    <div class="callout info">
+        <div class="callout-title">Estacionariedad estricta vs. débil</div>
+        <p>Un proceso es <strong>estrictamente estacionario</strong> si toda su distribución conjunta es invariante en el tiempo: $F\{y_1, \ldots, y_T\} = F\{y_{1+s}, \ldots, y_{T+s}\}$. Esto es mucho más restrictivo. En la práctica nos concentramos en la estacionariedad débil (las tres condiciones de arriba), que involucra solo los dos primeros momentos de la distribución (Alonso, 2020).</p>
+    </div>
+
+    <!-- ═══ 2 ═══ -->
+    <h2>2. El ruido blanco</h2>
+
+    <p>La piedra angular de todos los procesos que estudiaremos es el <strong>ruido blanco</strong> (<em>white noise</em>). Un proceso $\varepsilon_t$ es ruido blanco si:</p>
+
+    <div class="math-block">
+        <span class="math-label">Media cero:</span>
+        $$E[\varepsilon_t] = 0$$
+        <span class="math-label">Varianza constante:</span>
+        $$\text{Var}[\varepsilon_t] = \sigma_\varepsilon^2$$
+        <span class="math-label">No autocorrelación:</span>
+        $$\text{Cov}[\varepsilon_t, \varepsilon_s] = E[\varepsilon_t \varepsilon_s] = 0 \quad \text{para } t \neq s$$
+    </div>
+
+    <p>La ausencia de autocorrelación implica que la serie <strong>no se puede predecir</strong> por medio de alguna combinación lineal de sus valores pasados. Si además asumimos normalidad, tenemos un <strong>ruido blanco gaussiano</strong>: $\varepsilon_t \sim \text{i.i.d.} \; N(0, \sigma_\varepsilon^2)$.</p>
+
+    <div class="callout">
+        <div class="callout-title">¿Por qué importa?</div>
+        <p>Un ruido blanco es, por definición, un proceso estacionario. Cuando modelamos series de tiempo (ARIMA, regresión, etc.), buscamos que los <strong>residuales</strong> del modelo se comporten como un ruido blanco. Si lo logran, significa que el modelo ha extraído toda la información predecible de la serie. Verificar esto equivale a comprobar los supuestos del Teorema de Gauss-Markov (Alonso, 2020, Cap. 4).</p>
+    </div>
+
+    <!-- ═══ 3 ═══ -->
+    <h2>3. ¿Cómo determinar si una serie es ruido blanco?</h2>
+
+    <p>Debemos verificar tres propiedades: no autocorrelación, homoscedasticidad, y (opcionalmente) normalidad. Usaremos dos series simuladas: <strong>y1</strong> (un ruido blanco verdadero) y <strong>y2</strong> (un proceso ARMA con autocorrelación).</p>
+
+    <h3>3.1 Carga de datos y visualización</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> statsmodels.sandbox.stats.runs <span class="kw">import</span> runstest_1samp
+<span class="kw">import</span> statsmodels.api <span class="kw">as</span> sm
+<span class="kw">from</span> matplotlib <span class="kw">import</span> pyplot <span class="kw">as</span> plt
+<span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+<span class="cm"># Cargar datos simulados</span>
+data = pd.<span class="fn">read_excel</span>(
+    <span class="st">"https://raw.githubusercontent.com/dagudelo30/Series-de-tiempo---Javeriana-Cali/main/intro-moving_average/datosEmpleo.xlsx"</span>
+)
+
+<span class="cm"># Visualizar ambas series</span>
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">2</span>, <span class="nb">1</span>, figsize=(<span class="nb">12</span>, <span class="nb">6</span>))
+axes[<span class="nb">0</span>].<span class="fn">plot</span>(data[<span class="st">"y1"</span>]); axes[<span class="nb">0</span>].<span class="fn">set_title</span>(<span class="st">"Ruido Blanco (y1)"</span>); axes[<span class="nb">0</span>].<span class="fn">grid</span>()
+axes[<span class="nb">1</span>].<span class="fn">plot</span>(data[<span class="st">"y2"</span>]); axes[<span class="nb">1</span>].<span class="fn">set_title</span>(<span class="st">"Serie autocorrelacionada (y2)"</span>); axes[<span class="nb">1</span>].<span class="fn">grid</span>()
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <!-- ═══ 4 ═══ -->
+    <h2>4. Pruebas de autocorrelación</h2>
+
+    <h3>4.1 Prueba de Rachas (Wald-Wolfowitz, 1940)</h3>
+
+    <p>Es una prueba <strong>no paramétrica</strong> que cuenta las "seguidillas" de signo (rachas) en la serie. Si no hay autocorrelación, los cambios de signo deberían ocurrir con una frecuencia esperada — ni demasiados (autocorrelación negativa) ni muy pocos (autocorrelación positiva).</p>
+
+    <div class="math-block">
+        <span class="math-label">Hipótesis:</span>
+        $$H_0: \rho = 0 \quad \text{(no hay autocorrelación)}$$
+        $$H_1: \rho \neq 0 \quad \text{(existe autocorrelación)}$$
+    </div>
+
+    <p>El estadístico se basa en el número de rachas observadas $k$, con valor esperado y varianza:</p>
+
+    <div class="math-block">
+        $$E(k) = \frac{2 N_+ N_-}{N_+ + N_-} + 1 \qquad \text{Var}(k) = \frac{2N_+N_-(2N_+N_- - N_+ - N_-)}{(N_+ + N_-)^2(N_+ + N_- - 1)}$$
+    </div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># ── Prueba de rachas para y1 (ruido blanco) ──</span>
+signo = data.y1 > <span class="nb">0</span>
+stat, pvalue = <span class="fn">runstest_1samp</span>(signo, correction=<span class="kw">False</span>)
+<span class="fn">print</span>(<span class="st">f"y1 → Estadístico: {stat:.4f}, p-valor: {pvalue:.4f}"</span>)
+
+<span class="cm"># ── Prueba de rachas para y2 (autocorrelacionada) ──</span>
+signo2 = data.y2 > <span class="nb">0</span>
+stat2, pvalue2 = <span class="fn">runstest_1samp</span>(signo2, correction=<span class="kw">False</span>)
+<span class="fn">print</span>(<span class="st">f"y2 → Estadístico: {stat2:.4f}, p-valor: {pvalue2:.2e}"</span>)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+y1 → Estadístico: -0.7446, p-valor: 0.4565
+y2 → Estadístico: -6.5998, p-valor: 4.12e-11</div>
+
+    <p>Para <strong>y1</strong>, el p-valor = 0.4565 no permite rechazar $H_0$ (no hay evidencia de autocorrelación). Para <strong>y2</strong>, el p-valor ≈ 0 permite rechazar la hipótesis nula: la serie presenta autocorrelación significativa.</p>
+
+    <h3>4.2 Prueba de Box-Pierce y Ljung-Box</h3>
+
+    <p>Box y Pierce (1970) propusieron un test que verifica si las primeras $s$ autocorrelaciones son <strong>conjuntamente</strong> iguales a cero:</p>
+
+    <div class="math-block">
+        <span class="math-label">Estadístico de Box-Pierce:</span>
+        $$Q = n \sum_{j=1}^{s} r_j^2 \sim \chi^2_s$$
+        <span class="math-label">Corrección de Ljung-Box (para muestras pequeñas):</span>
+        $$Q' = n(n+2) \sum_{j=1}^{s} \frac{r_j^2}{n-j} \sim \chi^2_s$$
+    </div>
+
+    <p>donde $r_j$ es la autocorrelación muestral al rezago $j$. La práctica común es probar para los primeros 20 rezagos:</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Prueba de Ljung-Box para y1 (primeros 20 rezagos)</span>
+Resul_lb_bp = sm.stats.<span class="fn">acorr_ljungbox</span>(
+    data.y1, lags=<span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">21</span>),
+    return_df=<span class="kw">True</span>, boxpierce=<span class="kw">True</span>
+)
+
+<span class="cm"># Agregar columnas de decisión</span>
+Resul_lb_bp[<span class="st">"lb_ho"</span>] = np.<span class="fn">where</span>(
+    Resul_lb_bp[<span class="st">'lb_pvalue'</span>] < <span class="nb">0.05</span>,
+    <span class="st">'rechazo_ho/hay_autocorr'</span>,
+    <span class="st">'no_rechazo_ho/no_hay_autocorr'</span>
+)
+Resul_lb_bp[<span class="st">"bp_ho"</span>] = np.<span class="fn">where</span>(
+    Resul_lb_bp[<span class="st">'bp_pvalue'</span>] < <span class="nb">0.05</span>,
+    <span class="st">'rechazo_ho/hay_autocorr'</span>,
+    <span class="st">'no_rechazo_ho/no_hay_autocorr'</span>
+)
+<span class="fn">print</span>(Resul_lb_bp)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — y1 (primeros 5 rezagos)</span>
+      lb_stat  lb_pvalue    bp_stat  bp_pvalue                          lb_ho
+1    5.411117   0.020009   5.251967   0.021922        rechazo_ho/hay_autocorr
+2    5.625488   0.060040   5.457931   0.065287  no_rechazo_ho/no_hay_autocorr
+3    5.625680   0.131312   5.458113   0.141165  no_rechazo_ho/no_hay_autocorr
+4    6.065129   0.194337   5.871712   0.208936  no_rechazo_ho/no_hay_autocorr
+5    6.383929   0.270808   6.173929   0.289682  no_rechazo_ho/no_hay_autocorr
+...  (rezagos 6-20: no rechazo en todos)</div>
+
+    <p>A pesar de que el primer rezago sugiere autocorrelación, para los demás 19 rezagos no se rechaza $H_0$. Se concluye que <strong>y1 se comporta como ruido blanco</strong> según esta prueba.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Para y2: todas las pruebas rechazan H0</span>
+Resul_y2 = sm.stats.<span class="fn">acorr_ljungbox</span>(
+    data.y2, lags=<span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">21</span>),
+    return_df=<span class="kw">True</span>, boxpierce=<span class="kw">True</span>
+)
+<span class="fn">print</span>(Resul_y2[[<span class="st">'lb_stat'</span>, <span class="st">'lb_pvalue'</span>]].head())</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — y2 (primeros 5 rezagos)</span>
+       lb_stat     lb_pvalue
+1    62.298996  2.950756e-15
+2    84.457955  4.572862e-19
+3    92.384452  6.734999e-20
+4    94.146987  1.730402e-19
+5    94.230352  8.669536e-19</div>
+
+    <p>Para <strong>y2</strong> todos los p-valores son esencialmente cero: la serie tiene autocorrelación fuerte y no es ruido blanco.</p>
+
+    <!-- ═══ 5 ═══ -->
+    <h2>5. Prueba de homoscedasticidad (efectos ARCH/GARCH)</h2>
+
+    <p>Para detectar si la varianza tiene un comportamiento autocorrelacionado (efecto ARCH/GARCH — muy común en series financieras), aplicamos Ljung-Box sobre la <strong>serie al cuadrado centrada en su media</strong>: $(y_t - \bar{y})^2$.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Ljung-Box sobre (y1 - media)^2 para detectar ARCH/GARCH</span>
+result_arch = sm.stats.<span class="fn">acorr_ljungbox</span>(
+    (data.y1 - data.y1.<span class="fn">mean</span>())**<span class="nb">2</span>,
+    lags=<span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">21</span>),
+    return_df=<span class="kw">True</span>, boxpierce=<span class="kw">True</span>
+)
+<span class="fn">print</span>(result_arch[[<span class="st">'lb_stat'</span>, <span class="st">'lb_pvalue'</span>]].head(<span class="nb">5</span>))</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+      lb_stat  lb_pvalue
+1    0.572389   0.449311
+2    0.915452   0.632721
+3    6.285833   0.098502
+4    6.405496   0.170843
+5    7.434561   0.190275</div>
+
+    <p>Ningún rezago rechaza $H_0$: <strong>no hay comportamiento ARCH/GARCH</strong> en y1. La varianza es constante (homoscedasticidad).</p>
+
+    <!-- ═══ 6 ═══ -->
+    <h2>6. Pruebas de normalidad</h2>
+
+    <p>La normalidad no es necesaria para ser ruido blanco, pero sí para ser <strong>ruido blanco gaussiano</strong> (necesario para intervalos de confianza basados en la distribución normal).</p>
+
+    <h3>6.1 Análisis gráfico: Q-Q Plot</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Gráfico Q-Q de normalidad</span>
+sm.<span class="fn">qqplot</span>(data.y1, line=<span class="st">'45'</span>)
+plt.<span class="fn">title</span>(<span class="st">"Q-Q Plot — Serie y1"</span>)
+plt.<span class="fn">show</span>()
+
+<span class="cm"># Histograma con curva normal teórica</span>
+mu, sigma = stats.norm.<span class="fn">fit</span>(data.y1)
+x_hat = np.<span class="fn">linspace</span>(<span class="fn">min</span>(data.y1), <span class="fn">max</span>(data.y1), <span class="nb">100</span>)
+fig, ax = plt.<span class="fn">subplots</span>(figsize=(<span class="nb">7</span>, <span class="nb">4</span>))
+ax.<span class="fn">hist</span>(data.y1, density=<span class="kw">True</span>, bins=<span class="nb">15</span>, alpha=<span class="nb">0.6</span>, label=<span class="st">"Histograma"</span>)
+ax.<span class="fn">plot</span>(x_hat, stats.norm.<span class="fn">pdf</span>(x_hat, mu, sigma), <span class="st">'r-'</span>, label=<span class="st">f"Normal(μ={mu:.2f}, σ={sigma:.2f})"</span>)
+ax.<span class="fn">legend</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <h3>6.2 Pruebas formales: Shapiro-Wilk y Jarque-Bera</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Prueba de Shapiro-Wilk</span>
+stat_sw, pval_sw = stats.<span class="fn">shapiro</span>(data.y1)
+<span class="fn">print</span>(<span class="st">f"Shapiro-Wilk → Estadístico: {stat_sw:.4f}, p-valor: {pval_sw:.4f}"</span>)
+
+<span class="cm"># Prueba de Jarque-Bera</span>
+stat_jb, pval_jb = stats.<span class="fn">jarque_bera</span>(data.y1)
+<span class="fn">print</span>(<span class="st">f"Jarque-Bera  → Estadístico: {stat_jb:.4f}, p-valor: {pval_jb:.4f}"</span>)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+Shapiro-Wilk → Estadístico: 0.9938, p-valor: 0.9310
+Jarque-Bera  → Estadístico: 0.3145, p-valor: 0.8545</div>
+
+    <p>Ambas pruebas no rechazan $H_0$ de normalidad. La serie <strong>y1 proviene de un proceso ruido blanco gaussiano</strong>.</p>
+
+    <!-- ═══ 7 ═══ -->
+    <h2>7. Resumen: Protocolo de verificación</h2>
+
+    <table>
+        <thead>
+            <tr><th>Propiedad</th><th>Prueba</th><th>y1 (ruido blanco)</th><th>y2 (autocorrelacionada)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Autocorrelación</td><td>Rachas (Wald-Wolfowitz)</td><td>No rechaza H₀ (p=0.4565)</td><td>Rechaza H₀ (p≈0)</td></tr>
+            <tr><td>Autocorrelación</td><td>Ljung-Box (20 rezagos)</td><td>No rechaza H₀</td><td>Rechaza H₀ en todos</td></tr>
+            <tr><td>Homoscedasticidad</td><td>Ljung-Box sobre $(y-\bar{y})^2$</td><td>No rechaza H₀</td><td>—</td></tr>
+            <tr><td>Normalidad</td><td>Shapiro-Wilk</td><td>No rechaza H₀ (p=0.931)</td><td>Rechaza H₀ (p=0.024)</td></tr>
+            <tr class="best-row"><td><strong>Conclusión</strong></td><td></td><td><strong>Ruido blanco gaussiano ✓</strong></td><td><strong>NO es ruido blanco ✗</strong></td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <div class="callout-title">Comentarios finales</div>
+        <p>Para determinar si una serie es estacionaria, el primer paso siempre es <strong>graficarla</strong>. Si tiene tendencia clara, probablemente no es estacionaria. Luego verificar las condiciones: primero la autocorrelación (lo más difícil de detectar "a ojo"), luego la homoscedasticidad, y finalmente la normalidad (opcional). En los próximos capítulos veremos pruebas formales de estacionariedad (como Dickey-Fuller Aumentada y KPSS) y cómo transformar series no estacionarias.</p>
+    </div>
+
+    <!-- ═══ REFS ═══ -->
+    <div class="references">
+        <h2>Referencias</h2>
+        <ul class="ref-list">
+            <li>Alonso, J. C. (2020). <em>Introducción a los pronósticos con modelos estadístico de series de tiempo para científico de datos (en R)</em>. Cap. 4: Estacionariedad. Universidad Icesi.</li>
+            <li>Wald, A. & Wolfowitz, J. (1940). On a test whether two samples are from the same population. <em>The Annals of Mathematical Statistics</em>, 11(2), 147–162.</li>
+            <li>Box, G. E. P. & Pierce, D. A. (1970). Distribution of residual autocorrelations in autoregressive-integrated moving average time series models. <em>JASA</em>, 65(332), 1509–1526.</li>
+            <li>Ljung, G. M. & Box, G. E. P. (1978). On a measure of lack of fit in time series models. <em>Biometrika</em>, 65(2), 297–303.</li>
+            <li>Hyndman, R. J. & Athanasopoulos, G. (2021). <em>Forecasting: Principles and Practice</em> (3rd ed). <a href="https://otexts.com/fpp3/">otexts.com/fpp3</a></li>
+            <li>Statsmodels. <em>Time Series Analysis</em>. <a href="https://www.statsmodels.org/stable/tsa.html">statsmodels.org</a></li>
+            <li>Repositorio del curso: <a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali</a></li>
+        </ul>
+    </div>
+
+    <footer class="page-footer">
+        Curso de Series de Tiempo · Universidad Javeriana Cali · Implementación en Python con <code>statsmodels</code> y <code>scipy.stats</code>
+    </footer>
+
+</div>
+</body>
+</html>

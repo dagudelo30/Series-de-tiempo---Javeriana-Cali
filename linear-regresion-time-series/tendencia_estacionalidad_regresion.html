@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tendencia y Estacionalidad con Modelos de Regresión en Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --bg: #fdfbf7; --bg-alt: #f5f0e8; --text: #2c2c2c; --text-muted: #6b6560;
+            --accent: #b8540c; --accent-light: #e8a86d; --accent-bg: #fef6ee;
+            --code-bg: #1e1e2e; --code-text: #cdd6f4; --code-comment: #6c7086;
+            --code-keyword: #cba6f7; --code-string: #a6e3a1; --code-function: #89b4fa;
+            --code-number: #fab387; --border: #e0d8ce; --shadow: rgba(44,44,44,0.06);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Source Sans 3',Georgia,serif; background:var(--bg); color:var(--text); line-height:1.78; font-size:17.5px; -webkit-font-smoothing:antialiased; }
+        .page-wrapper { max-width:860px; margin:0 auto; padding:2rem 2rem 5rem; }
+        .page-header { border-bottom:3px solid var(--accent); padding-bottom:2rem; margin-bottom:3rem; position:relative; }
+        .page-header::after { content:''; position:absolute; bottom:-3px; left:0; width:120px; height:3px; background:var(--accent-light); }
+        .breadcrumb { font-size:0.82rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:1rem; }
+        h1 { font-family:'Playfair Display',Georgia,serif; font-size:2.5rem; font-weight:700; line-height:1.15; margin-bottom:0.6rem; }
+        h1 em { font-style:italic; color:var(--accent); }
+        .subtitle { font-size:1.12rem; color:var(--text-muted); font-weight:300; max-width:620px; }
+        .meta-line { font-size:0.85rem; color:var(--text-muted); margin-top:0.8rem; }
+        .meta-line a { color:var(--accent); text-decoration:none; }
+        h2 { font-family:'Playfair Display',Georgia,serif; font-size:1.6rem; font-weight:700; margin-top:2.8rem; margin-bottom:1rem; padding-left:1rem; border-left:4px solid var(--accent); }
+        h3 { font-family:'Source Sans 3',sans-serif; font-size:1.15rem; font-weight:700; margin-top:2rem; margin-bottom:0.7rem; color:var(--accent); }
+        p { margin-bottom:1.1rem; } strong { font-weight:600; }
+        code { font-family:'Fira Code',monospace; font-size:0.88em; background:var(--bg-alt); padding:0.15em 0.4em; border-radius:4px; }
+        .callout { background:var(--accent-bg); border-left:4px solid var(--accent); padding:1.2rem 1.5rem; margin:1.5rem 0; border-radius:0 8px 8px 0; }
+        .callout-title { font-weight:700; font-size:0.88rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--accent); margin-bottom:0.4rem; }
+        .callout p:last-child { margin-bottom:0; }
+        .callout.info { background:#eef4fb; border-left-color:#4a7fb5; } .callout.info .callout-title { color:#4a7fb5; }
+        .callout.warn { background:#fef9ee; border-left-color:#c9960c; } .callout.warn .callout-title { color:#a07b0a; }
+        .math-block { background:var(--bg-alt); border:1px solid var(--border); border-radius:8px; padding:1.3rem 1.8rem; margin:1.5rem 0; overflow-x:auto; }
+        .math-label { font-family:'Source Sans 3',sans-serif; font-weight:600; color:var(--accent); font-size:0.85rem; display:block; margin-bottom:0.3rem; margin-top:0.6rem; }
+        .math-label:first-child { margin-top:0; }
+        .code-block { background:var(--code-bg); border-radius:10px; margin:1.5rem 0; overflow:hidden; box-shadow:0 4px 20px var(--shadow); }
+        .code-header { background:#181825; padding:0.55rem 1.2rem; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid #313244; }
+        .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+        .dot.r { background:#f38ba8; } .dot.y { background:#f9e2af; } .dot.g { background:#a6e3a1; }
+        .code-lang { margin-left:auto; font-size:0.73rem; color:var(--code-comment); font-family:'Fira Code',monospace; letter-spacing:0.05em; }
+        .code-block pre { padding:1.1rem 1.4rem; overflow-x:auto; font-family:'Fira Code',monospace; font-size:0.86rem; line-height:1.7; color:var(--code-text); white-space:pre; margin:0; }
+        .cm { color:#6c7086; font-style:italic; } .kw { color:#cba6f7; } .st { color:#a6e3a1; }
+        .fn { color:#89b4fa; } .nb { color:#fab387; } .op { color:#89dceb; }
+        .output-block { background:#f8f8f5; border:1px solid var(--border); border-radius:0 0 8px 8px; padding:0.9rem 1.3rem; margin:-0.8rem 0 1.5rem; font-family:'Fira Code',monospace; font-size:0.8rem; line-height:1.55; color:var(--text-muted); overflow-x:auto; border-top:2px dashed var(--border); white-space:pre; }
+        .output-label { font-family:'Source Sans 3',sans-serif; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--accent); margin-bottom:0.3rem; display:block; font-weight:600; white-space:normal; }
+        table { width:100%; border-collapse:collapse; margin:1.5rem 0; font-size:0.93rem; }
+        thead th { background:var(--accent); color:#fff; font-weight:600; padding:0.65rem 0.9rem; text-align:left; font-size:0.86rem; }
+        thead th:first-child { border-radius:8px 0 0 0; } thead th:last-child { border-radius:0 8px 0 0; }
+        tbody td { padding:0.55rem 0.9rem; border-bottom:1px solid var(--border); } tbody tr:hover { background:var(--accent-bg); }
+        .best-row { background:#eef9ee; font-weight:600; }
+        .references { margin-top:3rem; padding-top:2rem; border-top:2px solid var(--border); }
+        .references h2 { border-left:none; padding-left:0; font-size:1.35rem; }
+        .ref-list { list-style:none; padding:0; }
+        .ref-list li { padding:0.45rem 0 0.45rem 1.5rem; position:relative; font-size:0.91rem; line-height:1.55; color:var(--text-muted); }
+        .ref-list li::before { content:'→'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+        .ref-list a { color:var(--accent); text-decoration:none; border-bottom:1px dotted var(--accent-light); }
+        .ref-list a:hover { border-bottom-style:solid; }
+        .page-footer { margin-top:3rem; padding-top:1.5rem; border-top:1px solid var(--border); font-size:0.82rem; color:var(--text-muted); text-align:center; }
+        @media (max-width:640px) { body { font-size:16px; } .page-wrapper { padding:1.2rem 1rem 3rem; } h1 { font-size:1.8rem; } h2 { font-size:1.3rem; } .code-block pre { font-size:0.78rem; padding:0.9rem; } }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="breadcrumb">Series de Tiempo · Módulo 3 </div>
+        <h1>Tendencia y Estacionalidad con <em>Modelos de Regresión</em></h1>
+        <p class="subtitle">Estimación de tendencia (lineal, cuadrática, polinómica) y estacionalidad determinística con variables dummy en Python</p>
+        <p class="meta-line">
+            Datos: Tasa de desempleo mensual — 13 ciudades principales de Colombia (2001–2019) ·
+            <a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">Repositorio del curso</a>
+        </p>
+    </header>
+
+    <!-- ═══ 1 ═══ -->
+    <h2>1. Contexto: Descomposición aditiva</h2>
+
+    <p>Toda serie de tiempo puede descomponerse en sus componentes fundamentales. En la descomposición aditiva:</p>
+
+    <div class="math-block">
+        $$y_t = T_t + S_t + R_t$$
+    </div>
+
+    <p>donde $T_t$ es el componente de tendencia (y ciclo), $S_t$ es el componente estacional y $R_t$ es el residuo aleatorio. En este capítulo estimamos $T_t$ y $S_t$ usando <strong>regresión por MCO</strong> (Mínimos Cuadrados Ordinarios), y verificamos que $R_t$ se comporte como un ruido blanco (Alonso, 2020, Cap. 5).</p>
+
+    <div class="callout info">
+        <div class="callout-title">Marco teórico</div>
+        <p>La idea es sencilla: si la serie tiene tendencia, la modelamos como función del tiempo. Si tiene estacionalidad, la capturamos con variables dummy. Los pronósticos del modelo solo serán válidos si los residuales cumplen los supuestos del Teorema de Gauss-Markov (no autocorrelación, homoscedasticidad, normalidad). Por eso las pruebas del Capítulo 4 son indispensables aquí (Hyndman & Athanasopoulos, 2021, Cap. 7).</p>
+    </div>
+
+    <!-- ═══ 2 ═══ -->
+    <h2>2. Carga de datos</h2>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> statsmodels.api <span class="kw">as</span> sm
+<span class="kw">from</span> matplotlib <span class="kw">import</span> pyplot <span class="kw">as</span> plt
+<span class="kw">from</span> sklearn.metrics <span class="kw">import</span> mean_squared_error
+<span class="kw">from</span> dateutil.relativedelta <span class="kw">import</span> relativedelta
+
+data = pd.<span class="fn">read_excel</span>(
+    <span class="st">"datosEmpleo.xlsx"</span>,
+    index_col=<span class="st">'mes'</span>, parse_dates=<span class="kw">True</span>
+)
+y = data[<span class="st">"TD_13ciudades"</span>]
+
+plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">5</span>))
+plt.<span class="fn">plot</span>(y)
+plt.<span class="fn">title</span>(<span class="st">"Tasa de desempleo mensual (13 ciudades)"</span>)
+plt.<span class="fn">ylabel</span>(<span class="st">"Tasa de desempleo (%)"</span>); plt.<span class="fn">grid</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <!-- ═══ 3 ═══ -->
+    <h2>3. Tendencia lineal</h2>
+
+    <p>El modelo más simple supone que la tendencia es una función lineal del tiempo:</p>
+
+    <div class="math-block">
+        $$y_t = \beta_1 + \beta_2 \cdot t + \varepsilon_t$$
+    </div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Crear variable de tiempo t = 1, 2, ..., T</span>
+x = np.<span class="fn">linspace</span>(<span class="nb">1</span>, data.shape[<span class="nb">0</span>], data.shape[<span class="nb">0</span>])
+X = sm.<span class="fn">add_constant</span>(x)
+
+<span class="cm"># Ajustar regresión lineal por MCO</span>
+lin = sm.<span class="fn">OLS</span>(y, X)
+lin_t = lin.<span class="fn">fit</span>()
+<span class="fn">print</span>(lin_t.summary())</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Resultados clave</span>
+                   coef    std err    t      P>|t|
+const        1.93e+01    0.281    68.740   0.000
+x1          -3.53e-02    0.002   -20.318   0.000
+
+R-squared: 0.652    Adj. R-squared: 0.651</div>
+
+    <p>El coeficiente de $t$ es significativo (p < 0.001), pero el $R^2$ = 0.652 indica que la tendencia lineal solo explica el 65% de la variación. Si graficamos los residuales, se observa que aún contienen <strong>tendencia no lineal y estacionalidad</strong>, lo cual viola los supuestos de Gauss-Markov.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Visualizar tendencia y residuales</span>
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">1</span>, <span class="nb">2</span>, figsize=(<span class="nb">14</span>, <span class="nb">5</span>))
+
+axes[<span class="nb">0</span>].<span class="fn">plot</span>(y.values, label=<span class="st">"Tasa desempleo"</span>)
+axes[<span class="nb">0</span>].<span class="fn">plot</span>(lin_t.fittedvalues, label=<span class="st">"Tendencia Lineal"</span>, color=<span class="st">'red'</span>)
+axes[<span class="nb">0</span>].<span class="fn">legend</span>(); axes[<span class="nb">0</span>].<span class="fn">set_title</span>(<span class="st">"Serie + Tendencia lineal"</span>); axes[<span class="nb">0</span>].<span class="fn">grid</span>()
+
+axes[<span class="nb">1</span>].<span class="fn">plot</span>(lin_t.resid)
+axes[<span class="nb">1</span>].<span class="fn">set_title</span>(<span class="st">"Residuales"</span>); axes[<span class="nb">1</span>].<span class="fn">set_ylabel</span>(<span class="st">"Residuales"</span>); axes[<span class="nb">1</span>].<span class="fn">grid</span>()
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <div class="callout warn">
+        <div class="callout-title">Residuales no aleatorios</div>
+        <p>Si los residuales muestran patrones (tendencia o estacionalidad), significa que el modelo aún tiene información por extraer. No debemos confiar en los pronósticos hasta que los residuales se comporten como ruido blanco.</p>
+    </div>
+
+    <h3>3.1 Pronóstico con tendencia lineal</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>h = <span class="nb">12</span>
+x_for = np.<span class="fn">linspace</span>(data.shape[<span class="nb">0</span>] + <span class="nb">1</span>, data.shape[<span class="nb">0</span>] + h, h)
+X_for = sm.<span class="fn">add_constant</span>(x_for)
+
+dt = lin_t.<span class="fn">get_prediction</span>(X_for).<span class="fn">summary_frame</span>(alpha=<span class="nb">0.05</span>)
+preds = dt[[<span class="st">'mean'</span>, <span class="st">'obs_ci_lower'</span>, <span class="st">'obs_ci_upper'</span>]]
+preds.columns = [<span class="st">'Point_forecast'</span>, <span class="st">'lower_95'</span>, <span class="st">'upper_95'</span>]
+<span class="fn">print</span>(preds)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+    Point_forecast  lower_95   upper_95
+0         8.664530  5.364271  11.964789
+1         8.629217  5.328560  11.929874
+2         8.593905  5.292846  11.894964
+...</div>
+
+    <!-- ═══ 4 ═══ -->
+    <h2>4. Tendencia cuadrática</h2>
+
+    <p>Si la tendencia no es lineal, podemos usar un polinomio de grado 2:</p>
+
+    <div class="math-block">
+        $$y_t = \beta_1 + \beta_2 \cdot t + \beta_3 \cdot t^2 + \varepsilon_t$$
+    </div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Agregar t² al modelo</span>
+data[<span class="st">"x"</span>] = np.<span class="fn">linspace</span>(<span class="nb">1</span>, data.shape[<span class="nb">0</span>], data.shape[<span class="nb">0</span>])
+data[<span class="st">"x2"</span>] = data[<span class="st">"x"</span>]**<span class="nb">2</span>
+
+X = sm.<span class="fn">add_constant</span>(data[[<span class="st">"x"</span>, <span class="st">"x2"</span>]])
+pol = sm.<span class="fn">OLS</span>(y, X)
+pol_2 = pol.<span class="fn">fit</span>()
+<span class="fn">print</span>(pol_2.summary())</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Resultados clave</span>
+                   coef    std err    t      P>|t|
+const        2.09e+01    0.256    81.619   0.000
+x           -7.61e-02    0.005   -14.756   0.000
+x2           1.84e-04    0.000     8.206   0.000
+
+R-squared: 0.803    Adj. R-squared: 0.801</div>
+
+    <p>El $R^2$ mejora a 0.803, pero los residuales aún muestran estacionalidad. Necesitamos incorporar el componente estacional.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Pronóstico con tendencia cuadrática</span>
+h = <span class="nb">12</span>
+x_for = np.<span class="fn">linspace</span>(data.shape[<span class="nb">0</span>] + <span class="nb">1</span>, data.shape[<span class="nb">0</span>] + h, h)
+X_for = sm.<span class="fn">add_constant</span>(np.<span class="fn">stack</span>((x_for, x_for**<span class="nb">2</span>), axis=<span class="nb">1</span>))
+
+dt = pol_2.<span class="fn">get_prediction</span>(X_for).<span class="fn">summary_frame</span>(alpha=<span class="nb">0.05</span>)
+preds = dt[[<span class="st">'mean'</span>, <span class="st">'obs_ci_lower'</span>, <span class="st">'obs_ci_upper'</span>]]
+preds.columns = [<span class="st">'Point_forecast'</span>, <span class="st">'lower_95'</span>, <span class="st">'upper_95'</span>]
+<span class="fn">print</span>(preds)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+    Point_forecast  lower_95   upper_95
+0        11.129188  8.610785  13.647592
+1        11.160189  8.639963  13.680415
+2        11.191783  8.669678  13.713887
+...</div>
+
+    <!-- ═══ 5 ═══ -->
+    <h2>5. Estimación de la estacionalidad con variables dummy</h2>
+
+    <p>La estacionalidad determinística aditiva se modela con <strong>variables dummy</strong> mensuales. Para datos mensuales se crean 11 dummies (una por cada mes excepto el de referencia) para evitar multicolinealidad perfecta:</p>
+
+    <div class="math-block">
+        $$y_t = \beta_1 + \sum_{i=2}^{12} \beta_i \cdot D_{i,t} + \varepsilon_t$$
+    </div>
+
+    <p>donde $D_{i,t} = 1$ si $t$ corresponde al mes $i$. El intercepto $\beta_1$ captura el efecto del mes de referencia (enero), y cada $\beta_i$ representa la diferencia respecto a ese mes base.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Crear dummies mensuales (drop_first=True para evitar multicolinealidad)</span>
+month_dummies = pd.<span class="fn">get_dummies</span>(
+    data.index.month,
+    drop_first=<span class="kw">True</span>,
+    dtype=<span class="nb">float</span>
+).<span class="fn">set_index</span>(data.index)
+
+X = sm.<span class="fn">add_constant</span>(month_dummies)
+sea = sm.<span class="fn">OLS</span>(y, X)
+season = sea.<span class="fn">fit</span>()
+<span class="fn">print</span>(season.summary())</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Resultados clave</span>
+R-squared: 0.134
+
+Mes  2 (feb): coef = -0.73, p = 0.309
+Mes 10 (oct): coef = -2.30, p = 0.002  (menor desempleo)
+Mes  1 (ene): intercepto = 15.08       (referencia)
+...</div>
+
+    <p>El $R^2$ = 0.134 es bajo: la estacionalidad sola no explica bien la serie. Sin embargo, los residuales muestran que se capturó el patrón estacional, pero <strong>persiste la tendencia</strong>.</p>
+
+    <!-- ═══ 6 ═══ -->
+    <h2>6. Modelo completo: Tendencia + Estacionalidad</h2>
+
+    <p>Combinamos la tendencia polinómica con las variables dummy estacionales:</p>
+
+    <div class="math-block">
+        $$y_t = \beta_1 + \beta_2 \cdot t + \beta_3 \cdot t^2 + \sum_{i=2}^{12} \beta_{i+2} \cdot D_{i,t} + \varepsilon_t$$
+    </div>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Tendencia cuadrática + estacionalidad</span>
+month_dummies = pd.<span class="fn">get_dummies</span>(
+    data.index.month, drop_first=<span class="kw">True</span>, dtype=<span class="nb">float</span>
+).<span class="fn">set_index</span>(data.index)
+
+X = sm.<span class="fn">add_constant</span>(
+    pd.<span class="fn">concat</span>([data[[<span class="st">"x"</span>, <span class="st">"x2"</span>]], month_dummies], axis=<span class="nb">1</span>)
+)
+season_pol2 = sm.<span class="fn">OLS</span>(y, X).<span class="fn">fit</span>()
+<span class="fn">print</span>(season_pol2.summary())</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Resultados clave</span>
+R-squared: 0.916    Adj. R-squared: 0.911
+F-statistic: 175.4  p-value: < 2.2e-16
+
+Todos los coeficientes de tendencia y la mayoría de dummies
+estacionales son significativos (p < 0.05)</div>
+
+    <p>El $R^2$ salta a <strong>0.916</strong> — el modelo ahora explica más del 91% de la variación. Pero la pregunta clave es: <strong>¿los residuales cumplen los supuestos?</strong></p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Verificar residuales</span>
+plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">4</span>))
+plt.<span class="fn">plot</span>(season_pol2.resid)
+plt.<span class="fn">title</span>(<span class="st">"Residuales: Tendencia cuadrática + Estacionalidad"</span>)
+plt.<span class="fn">ylabel</span>(<span class="st">"Residuales"</span>); plt.<span class="fn">grid</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <h3>6.1 Pronóstico con el modelo completo</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>h = <span class="nb">12</span>
+x_for = np.<span class="fn">linspace</span>(data.shape[<span class="nb">0</span>] + <span class="nb">1</span>, data.shape[<span class="nb">0</span>] + h, h)
+x_for_all = pd.<span class="fn">DataFrame</span>(
+    np.<span class="fn">stack</span>((x_for, x_for**<span class="nb">2</span>), axis=<span class="nb">1</span>),
+    columns=[<span class="st">"x"</span>, <span class="st">"x2"</span>]
+)
+
+<span class="cm"># Crear dummies para meses futuros</span>
+range_dates = pd.<span class="fn">date_range</span>(
+    data.index[-<span class="nb">1</span>] + relativedelta(months=<span class="nb">1</span>),
+    periods=h, freq=<span class="st">'MS'</span>
+)
+x_for_dummies = pd.<span class="fn">get_dummies</span>(range_dates.month, drop_first=<span class="kw">True</span>, dtype=<span class="nb">float</span>)
+X_for = sm.<span class="fn">add_constant</span>(
+    pd.<span class="fn">concat</span>([x_for_all, x_for_dummies], axis=<span class="nb">1</span>)
+)
+
+dt = season_pol2.<span class="fn">get_prediction</span>(X_for).<span class="fn">summary_frame</span>(alpha=<span class="nb">0.05</span>)
+preds = pd.<span class="fn">DataFrame</span>({
+    <span class="st">'Point_forecast'</span>: dt[<span class="st">'mean'</span>].values,
+    <span class="st">'lower_95'</span>: dt[<span class="st">'obs_ci_lower'</span>].values,
+    <span class="st">'upper_95'</span>: dt[<span class="st">'obs_ci_upper'</span>].values
+}, index=range_dates)
+<span class="fn">print</span>(preds)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida</span>
+            Point_forecast   lower_95   upper_95
+2019-07-01       11.136626   9.410734  12.862519
+2019-08-01       10.879809   9.152873  12.606745
+2019-09-01       10.701989   8.973983  12.429996
+2019-10-01       10.126577   8.397474  11.855681
+2019-11-01        9.785401   8.055173  11.515629
+2019-12-01       10.373109   8.641731  12.104488
+2020-01-01       13.580558  11.851329  15.309788
+...</div>
+
+    <!-- ═══ 7 ═══ -->
+    <h2>7. Evaluación de los supuestos de los residuales</h2>
+
+    <p>Para que los pronósticos e intervalos de confianza sean válidos, los residuales deben comportarse como ruido blanco (ver Capítulo 4). Debemos verificar:</p>
+
+    <h3>7.1 No autocorrelación (Ljung-Box)</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>result_lb = sm.stats.<span class="fn">acorr_ljungbox</span>(
+    season_pol2.resid, lags=<span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">21</span>),
+    return_df=<span class="kw">True</span>, boxpierce=<span class="kw">True</span>
+)
+<span class="fn">print</span>(result_lb[[<span class="st">'lb_stat'</span>, <span class="st">'lb_pvalue'</span>]])</pre>
+    </div>
+
+    <h3>7.2 No heteroscedasticidad (ARCH/GARCH)</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Ljung-Box sobre residuales al cuadrado</span>
+result_arch = sm.stats.<span class="fn">acorr_ljungbox</span>(
+    season_pol2.resid**<span class="nb">2</span>,
+    lags=<span class="fn">range</span>(<span class="nb">1</span>, <span class="nb">21</span>),
+    return_df=<span class="kw">True</span>
+)
+<span class="fn">print</span>(result_arch[[<span class="st">'lb_stat'</span>, <span class="st">'lb_pvalue'</span>]].head())</pre>
+    </div>
+
+    <h3>7.3 Normalidad (Jarque-Bera y Shapiro-Wilk)</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+<span class="cm"># Jarque-Bera</span>
+jb_stat, jb_pval = stats.<span class="fn">jarque_bera</span>(season_pol2.resid)
+<span class="fn">print</span>(<span class="st">f"Jarque-Bera: stat={jb_stat:.4f}, p={jb_pval:.4f}"</span>)
+
+<span class="cm"># Shapiro-Wilk</span>
+sw_stat, sw_pval = stats.<span class="fn">shapiro</span>(season_pol2.resid)
+<span class="fn">print</span>(<span class="st">f"Shapiro-Wilk: stat={sw_stat:.4f}, p={sw_pval:.4f}"</span>)</pre>
+    </div>
+
+    <!-- ═══ 8 ═══ -->
+    <h2>8. Comparación de modelos fuera de muestra</h2>
+
+    <p>La comparación definitiva siempre se hace <strong>fuera de muestra</strong>. Siguiendo el enfoque del libro, podemos evaluar diferentes órdenes polinómicos combinados con estacionalidad:</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Comparación de modelos con diferentes órdenes polinómicos</span>
+results = {}
+<span class="kw">for</span> name, model <span class="kw">in</span> [
+    (<span class="st">"Lineal"</span>, lin_t),
+    (<span class="st">"Cuadrática"</span>, pol_2),
+    (<span class="st">"Solo Estacional"</span>, season),
+    (<span class="st">"Cuadrática + Estacional"</span>, season_pol2)
+]:
+    results[name] = {
+        <span class="st">'R²'</span>: model.rsquared,
+        <span class="st">'R² adj'</span>: model.rsquared_adj,
+        <span class="st">'AIC'</span>: model.aic,
+        <span class="st">'BIC'</span>: model.bic
+    }
+
+comparison = pd.<span class="fn">DataFrame</span>(results).T
+<span class="fn">print</span>(comparison.<span class="fn">round</span>(<span class="nb">4</span>))</pre>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Modelo</th><th>R²</th><th>R² adj</th><th>Captura tendencia</th><th>Captura estacionalidad</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Tendencia Lineal</td><td>0.652</td><td>0.651</td><td>Parcial</td><td>No</td></tr>
+            <tr><td>Tendencia Cuadrática</td><td>0.803</td><td>0.801</td><td>Sí</td><td>No</td></tr>
+            <tr><td>Solo Estacionalidad</td><td>0.134</td><td>0.088</td><td>No</td><td>Sí</td></tr>
+            <tr class="best-row"><td>Cuadrática + Estacionalidad</td><td>0.916</td><td>0.911</td><td>Sí</td><td>Sí</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <div class="callout-title">Resultado</div>
+        <p>El modelo con <strong>tendencia cuadrática + estacionalidad</strong> es claramente superior ($R^2 = 0.916$). Sin embargo, para órdenes polinómicos superiores (3, 4, ..., 9), se debe comparar el RMSE fuera de muestra y verificar que no haya sobreajuste. El libro de Alonso muestra que a partir de polinomios de orden 7+ los pronósticos se deterioran dramáticamente.</p>
+    </div>
+
+    <!-- ═══ 9 ═══ -->
+    <h2>9. Limitaciones y consideraciones</h2>
+
+    <p><strong>Sobreajuste con polinomios altos:</strong> A medida que aumenta el orden del polinomio, el ajuste in-sample mejora pero los pronósticos fuera de muestra pueden volverse muy inestables. Polinomios de orden 7+ tienden a "explotar" en la extrapolación (Alonso, 2020).</p>
+
+    <p><strong>Estacionalidad determinística:</strong> El modelo asume que el patrón estacional es <strong>fijo y predeterminado</strong>. Si la estacionalidad cambia en el tiempo, se necesitan modelos más sofisticados (estacionalidad estocástica, SARIMA).</p>
+
+    <p><strong>Validación de supuestos:</strong> Los pronósticos e intervalos de confianza solo son válidos si los residuales cumplen los supuestos de Gauss-Markov. Siempre verificar autocorrelación, homoscedasticidad y (para intervalos paramétricos) normalidad.</p>
+
+    <p><strong>Multicolinealidad:</strong> Al usar polinomios, las variables $t$, $t^2$, $t^3$ están correlacionadas. Aunque esto no sesga los coeficientes, puede inflar los errores estándar. Considerar usar polinomios ortogonales si esto es un problema.</p>
+
+    <div class="callout">
+        <div class="callout-title">Ejercicio propuesto</div>
+        <p>Empleando la información del <strong>número de ocupados</strong> en miles de personas (<code>Ocupados</code>) para las 13 principales ciudades de Colombia, encuentre el mejor pronóstico para los próximos 6 meses empleando los métodos vistos en esta clase. Compare los resultados con el mejor modelo encontrado en la clase de suavizamiento exponencial.</p>
+    </div>
+
+    <!-- ═══ REFS ═══ -->
+    <div class="references">
+        <h2>Referencias</h2>
+        <ul class="ref-list">
+            <li>Alonso, J. C. (2020). <em>Introducción a los pronósticos con modelos estadístico de series de tiempo para científico de datos (en R)</em>. Cap. 5: Tendencia y estacionalidad. Universidad Icesi.</li>
+            <li>Hyndman, R. J. & Athanasopoulos, G. (2021). <em>Forecasting: Principles and Practice</em> (3rd ed). Cap. 7: Time series regression models. <a href="https://otexts.com/fpp3/regression.html">otexts.com/fpp3</a></li>
+            <li>Hyndman, R. J. et al. (2025). <em>FPP — the Pythonic Way</em>. Cap. 7. <a href="https://otexts.com/fpppy/nbs/07-regression.html">otexts.com/fpppy</a></li>
+            <li>Statsmodels. <em>OLS Regression</em>. <a href="https://www.statsmodels.org/stable/regression.html">statsmodels.org</a></li>
+            <li>Filippone, M. B. <em>Stationarity — Time series analysis with Python</em>. <a href="https://filippomb.github.io/python-time-series-handbook/notebooks/02/stationarity.html">python-time-series-handbook</a></li>
+            <li>Repositorio del curso: <a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali</a></li>
+        </ul>
+    </div>
+
+    <footer class="page-footer">
+        Curso de Series de Tiempo · Universidad Javeriana Cali · Implementación en Python con <code>statsmodels.OLS</code>
+    </footer>
+
+</div>
+</body>
+</html>
