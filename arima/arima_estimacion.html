@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARMA, ARIMA y Estimación — Series de Tiempo en Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --bg: #fdfbf7;
+            --bg-alt: #f5f0e8;
+            --text: #2c2c2c;
+            --text-muted: #6b6560;
+            --accent: #b8540c;
+            --accent-light: #e8a86d;
+            --accent-bg: #fef6ee;
+            --code-bg: #1e1e2e;
+            --code-text: #cdd6f4;
+            --code-comment: #6c7086;
+            --code-keyword: #cba6f7;
+            --code-string: #a6e3a1;
+            --code-function: #89b4fa;
+            --code-number: #fab387;
+            --border: #e0d8ce;
+            --shadow: rgba(44, 44, 44, 0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Source Sans 3', Georgia, serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.78; font-size: 17.5px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .page-wrapper { max-width: 860px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .page-header { border-bottom: 3px solid var(--accent); padding-bottom: 2rem; margin-bottom: 3rem; position: relative; }
+        .page-header::after { content: ''; position: absolute; bottom: -3px; left: 0; width: 120px; height: 3px; background: var(--accent-light); }
+        .breadcrumb { font-size: 0.82rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 2.5rem; font-weight: 700; line-height: 1.15; margin-bottom: 0.6rem; }
+        h1 em { font-style: italic; color: var(--accent); }
+        .subtitle { font-size: 1.12rem; color: var(--text-muted); font-weight: 300; max-width: 620px; }
+        .meta-line { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem; }
+        .meta-line a { color: var(--accent); text-decoration: none; }
+        h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 700; margin-top: 2.8rem; margin-bottom: 1rem; padding-left: 1rem; border-left: 4px solid var(--accent); }
+        h3 { font-family: 'Source Sans 3', sans-serif; font-size: 1.15rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1.1rem; }
+        strong { font-weight: 600; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.88em; background: var(--bg-alt); padding: 0.15em 0.4em; border-radius: 4px; }
+        .callout { background: var(--accent-bg); border-left: 4px solid var(--accent); padding: 1.2rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
+        .callout-title { font-weight: 700; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.4rem; }
+        .callout p:last-child { margin-bottom: 0; }
+        .callout.info { background: #eef4fb; border-left-color: #4a7fb5; }
+        .callout.info .callout-title { color: #4a7fb5; }
+        .callout.warn { background: #fef9ee; border-left-color: #c9960c; }
+        .callout.warn .callout-title { color: #a07b0a; }
+        .math-block { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 1.3rem 1.8rem; margin: 1.5rem 0; overflow-x: auto; }
+        .math-label { font-family: 'Source Sans 3', sans-serif; font-weight: 600; color: var(--accent); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; margin-top: 0.6rem; }
+        .math-label:first-child { margin-top: 0; }
+        .code-block { background: var(--code-bg); border-radius: 10px; margin: 1.5rem 0; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+        .code-header { background: #181825; padding: 0.55rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid #313244; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.r { background: #f38ba8; } .dot.y { background: #f9e2af; } .dot.g { background: #a6e3a1; }
+        .code-lang { margin-left: auto; font-size: 0.73rem; color: var(--code-comment); font-family: 'Fira Code', monospace; letter-spacing: 0.05em; }
+        .code-block pre { padding: 1.1rem 1.4rem; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.86rem; line-height: 1.7; color: var(--code-text); white-space: pre; margin: 0; }
+        .cm { color: #6c7086; font-style: italic; } .kw { color: #cba6f7; } .st { color: #a6e3a1; }
+        .fn { color: #89b4fa; } .nb { color: #fab387; } .op { color: #89dceb; }
+        .output-block { background: #f8f8f5; border: 1px solid var(--border); border-radius: 0 0 8px 8px; padding: 0.9rem 1.3rem; margin: -0.8rem 0 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.55; color: var(--text-muted); overflow-x: auto; border-top: 2px dashed var(--border); white-space: pre; }
+        .output-label { font-family: 'Source Sans 3', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; display: block; font-weight: 600; white-space: normal; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.93rem; }
+        thead th { background: var(--accent); color: #fff; font-weight: 600; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.86rem; }
+        thead th:first-child { border-radius: 8px 0 0 0; } thead th:last-child { border-radius: 0 8px 0 0; }
+        tbody td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); }
+        tbody tr:hover { background: var(--accent-bg); }
+        .best-row { background: #eef9ee; font-weight: 600; }
+        .references { margin-top: 3rem; padding-top: 2rem; border-top: 2px solid var(--border); }
+        .references h2 { border-left: none; padding-left: 0; font-size: 1.35rem; }
+        .ref-list { list-style: none; padding: 0; }
+        .ref-list li { padding: 0.45rem 0 0.45rem 1.5rem; position: relative; font-size: 0.91rem; line-height: 1.55; color: var(--text-muted); }
+        .ref-list li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+        .ref-list a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-light); }
+        .ref-list a:hover { border-bottom-style: solid; }
+        .page-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted); text-align: center; }
+        @media (max-width: 640px) {
+            body { font-size: 16px; } .page-wrapper { padding: 1.2rem 1rem 3rem; }
+            h1 { font-size: 1.8rem; } h2 { font-size: 1.3rem; }
+            .code-block pre { font-size: 0.78rem; padding: 0.9rem; }
+        }
+        </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="breadcrumb">Series de Tiempo · Módulo 4 · Capítulos 8 y 9</div>
+        <h1>Modelos <em>ARMA</em>, <em>ARIMA</em> y Estimación</h1>
+        <p class="subtitle">Combinando AR y MA, integración para series no estacionarias, técnica Box-Jenkins, selección automática con auto_arima y pronósticos con bootstrap en Python</p>
+        <p class="meta-line">
+            Datos: Serie simulada ARIMA(0,1,1) ·
+            <a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">Repositorio del curso</a>
+        </p>
+    </header>
+
+    <!-- 1 -->
+    <h2>1. Modelos ARMA(p,q)</h2>
+
+    <p>Un proceso <strong>ARMA(p,q)</strong> combina ambas familias — componentes autoregresivos y de media móvil:</p>
+
+    <div class="math-block">
+        $$y_t = \delta + \phi_1 y_{t-1} + \cdots + \phi_p y_{t-p} + \theta_1 \varepsilon_{t-1} + \cdots + \theta_q \varepsilon_{t-q} + \varepsilon_t$$
+    </div>
+
+    <p>Usando el operador de rezago $L$ (donde $Ly_t = y_{t-1}$), esto se escribe de forma compacta como:</p>
+
+    <div class="math-block">
+        $$\phi_p(L) \, y_t = \theta_q(L) \, \varepsilon_t$$
+    </div>
+
+    <p>donde $\phi_p(L) = 1 - \phi_1 L - \cdots - \phi_p L^p$ y $\theta_q(L) = 1 + \theta_1 L + \cdots + \theta_q L^q$.</p>
+
+    <table>
+        <thead>
+            <tr><th>Propiedad</th><th>ARMA(p,q)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Estacionariedad</strong></td><td>Raíces de $\phi_p(z) = 0$ fuera del círculo unitario</td></tr>
+            <tr><td><strong>ACF</strong></td><td>$\rho_s \neq 0$ para $s \leq q$, luego decae exponencialmente</td></tr>
+            <tr><td><strong>PACF</strong></td><td>$\rho_s^* \neq 0$ para $s \leq p$, luego decae exponencialmente</td></tr>
+            <tr><td><strong>Invertibilidad</strong></td><td>Raíces de $\theta_q(z) = 0$ fuera del círculo unitario</td></tr>
+        </tbody>
+    </table>
+
+    <!-- 2 -->
+    <h2>2. Modelos ARIMA(p,d,q)</h2>
+
+    <p>Muchas series económicas no son estacionarias (tienen tendencia). Si diferenciamos $d$ veces la serie y obtenemos una serie estacionaria, decimos que $y_t \sim I(d)$ (integrada de orden $d$). Un modelo <strong>ARIMA(p,d,q)</strong> aplica un ARMA(p,q) sobre la serie diferenciada:</p>
+
+    <div class="math-block">
+        $$\Delta^d y_t = \delta + \phi_1 \Delta^d y_{t-1} + \cdots + \phi_p \Delta^d y_{t-p} + \theta_1 \varepsilon_{t-1} + \cdots + \theta_q \varepsilon_{t-q} + \varepsilon_t$$
+    </div>
+
+    <p>donde $\Delta y_t = y_t - y_{t-1}$ es el operador de primera diferencia. Casos especiales importantes:</p>
+
+    <div class="callout">
+        <div class="callout-title">Casos especiales</div>
+        <p><strong>ARIMA(0,0,0)</strong> = ruido blanco. <strong>ARIMA(0,1,0)</strong> = caminata aleatoria (<em>random walk</em>). <strong>ARIMA(p,0,q)</strong> = ARMA(p,q). <strong>ARIMA(0,1,1)</strong> = suavización exponencial simple (conexión con los métodos del Cap. 3).</p>
+    </div>
+
+    <!-- 3 -->
+    <h2>3. Estimación: Técnica de Box-Jenkins</h2>
+
+    <p>Box y Jenkins (1976) propusieron una metodología iterativa en tres fases para estimar modelos ARIMA:</p>
+
+    <div class="callout info">
+        <div class="callout-title">Las tres fases de Box-Jenkins</div>
+        <p><strong>1. Identificación:</strong> Graficar la serie, determinar si es estacionaria (diferenciar si no lo es), examinar ACF y PACF muestrales para proponer candidatos ARIMA(p,d,q).</p>
+        <p><strong>2. Estimación:</strong> Estimar los parámetros por máxima verosimilitud.</p>
+        <p><strong>3. Diagnóstico:</strong> Verificar que los residuales sean ruido blanco (no autocorrelación, homoscedasticidad, normalidad). Si no cumplen, volver a la fase 1.</p>
+    </div>
+
+    <p>Esta técnica tiene una componente de "arte" — dos investigadores pueden llegar a modelos candidatos diferentes al examinar la misma ACF/PACF. Por eso se complementa con selección automática.</p>
+
+    <!-- 4 -->
+    <h2>4. Implementación en Python</h2>
+
+    <h3>4.1 Carga de datos y ACF/PACF</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">from</span> pmdarima.arima <span class="kw">import</span> auto_arima, ARIMA
+<span class="kw">from</span> statsmodels.graphics.tsaplots <span class="kw">import</span> plot_acf, plot_pacf
+<span class="kw">import</span> pandas <span class="kw">as</span> pd, numpy <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+<span class="kw">import</span> statsmodels.api <span class="kw">as</span> sm
+
+<span class="cm"># Datos simulados ARIMA(0,1,1)</span>
+data = pd.<span class="fn">read_csv</span>(
+    <span class="st">"https://raw.githubusercontent.com/dagudelo30/Series-de-tiempo---Javeriana-Cali/refs/heads/main/arima/arima011.csv"</span>
+)
+
+<span class="cm"># ACF y PACF</span>
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">1</span>, <span class="nb">2</span>, figsize=(<span class="nb">12</span>, <span class="nb">4</span>))
+<span class="fn">plot_acf</span>(data[<span class="st">'ARIMA011'</span>], lags=<span class="nb">40</span>, ax=axes[<span class="nb">0</span>])
+<span class="fn">plot_pacf</span>(data[<span class="st">'ARIMA011'</span>], lags=<span class="nb">40</span>, ax=axes[<span class="nb">1</span>])
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <p>La ACF decae lentamente (señal de no estacionariedad → necesitamos diferenciar). Tras diferenciar, la ACF se trunca en el rezago 1 → candidato MA(1), es decir ARIMA(0,1,1).</p>
+
+    <h3>4.2 Selección automática con auto_arima</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># auto_arima: busca el mejor modelo minimizando AIC</span>
+model = <span class="fn">auto_arima</span>(
+    data[<span class="st">"ARIMA011"</span>],
+    max_p=<span class="nb">10</span>, max_q=<span class="nb">10</span>,
+    information_criterion=<span class="st">"aic"</span>,
+    trace=<span class="kw">True</span>,
+    error_action=<span class="st">'ignore'</span>,
+    suppress_warnings=<span class="kw">True</span>
+)
+model.<span class="fn">summary</span>()</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — Búsqueda stepwise</span>
+Performing stepwise search to minimize aic
+ ARIMA(2,1,2)(0,0,0)[0] intercept   : AIC=inf, Time=0.40 sec
+ ARIMA(0,1,0)(0,0,0)[0] intercept   : AIC=355.502, Time=0.01 sec
+ ARIMA(1,1,0)(0,0,0)[0] intercept   : AIC=337.330, Time=0.04 sec
+ ARIMA(0,1,1)(0,0,0)[0] intercept   : AIC=310.695, Time=0.05 sec  ← Ganador
+ ARIMA(1,1,1)(0,0,0)[0] intercept   : AIC=311.703, Time=0.08 sec
+
+Best model: SARIMAX(0, 1, 1)
+AIC: 310.695    Log Likelihood: -152.348</div>
+
+    <div class="callout">
+        <div class="callout-title">auto_arima encontró ARIMA(0,1,1)</div>
+        <p>Exactamente el DGP que generó los datos. El AIC selecciona el modelo más parsimonioso que explica bien los datos. La función <code>auto_arima</code> de <code>pmdarima</code> es el equivalente en Python del <code>auto.arima</code> de R del paquete forecast (Hyndman &amp; Khandakar, 2008).</p>
+    </div>
+
+    <h3>4.3 Diagnóstico de residuales</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Obtener residuales</span>
+residuals = model.<span class="fn">resid</span>()
+
+<span class="cm"># Gráfico de residuales</span>
+fig = plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">6</span>))
+plt.<span class="fn">plot</span>(residuals, label=<span class="st">"Residuales"</span>)
+plt.<span class="fn">axhline</span>(<span class="nb">0</span>, color=<span class="st">'red'</span>, ls=<span class="st">'--'</span>)
+plt.<span class="fn">legend</span>(); plt.<span class="fn">show</span>()
+
+<span class="cm"># Prueba Ljung-Box sobre residuales</span>
+lb_test = sm.stats.<span class="fn">acorr_ljungbox</span>(residuals, lags=<span class="nb">20</span>, return_df=<span class="kw">True</span>)
+<span class="fn">print</span>(lb_test)</pre>
+    </div>
+
+    <h3>4.4 Pronóstico</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>h = <span class="nb">10</span>
+y_forec, conf_int = model.<span class="fn">predict</span>(h, return_conf_int=<span class="kw">True</span>, alpha=<span class="nb">0.05</span>)
+
+preds = pd.<span class="fn">DataFrame</span>(
+    np.<span class="fn">column_stack</span>([y_forec, conf_int[:, <span class="nb">0</span>], conf_int[:, <span class="nb">1</span>]]),
+    columns=[<span class="st">'Point_forecast'</span>, <span class="st">'lower_95'</span>, <span class="st">'upper_95'</span>]
+)
+
+x_for = np.<span class="fn">linspace</span>(data.shape[<span class="nb">0</span>] + <span class="nb">1</span>, data.shape[<span class="nb">0</span>] + h, h)
+
+fig = plt.<span class="fn">figure</span>(figsize=(<span class="nb">12</span>, <span class="nb">6</span>))
+plt.<span class="fn">plot</span>(data[<span class="st">"time"</span>], data[<span class="st">"ARIMA011"</span>], label=<span class="st">"ARIMA011"</span>)
+plt.<span class="fn">plot</span>(x_for, preds[<span class="st">'Point_forecast'</span>], label=<span class="st">"Pronóstico"</span>)
+plt.<span class="fn">fill_between</span>(x_for, preds[<span class="st">'lower_95'</span>], preds[<span class="st">'upper_95'</span>],
+                color=<span class="st">'blue'</span>, alpha=<span class="nb">0.1</span>)
+plt.<span class="fn">legend</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <!-- 5 -->
+    <h2>5. Intervalos de confianza con Bootstrap</h2>
+
+    <p>Los intervalos de confianza paramétricos asumen normalidad de los errores. Si este supuesto no se cumple, se pueden construir intervalos por <strong>bootstrap</strong>: remuestrear los residuales con reemplazo y simular muchas trayectorias futuras.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="cm"># Ajustar modelo manualmente</span>
+model_manual = <span class="fn">ARIMA</span>(order=(<span class="nb">0</span>, <span class="nb">1</span>, <span class="nb">1</span>))
+results = model_manual.<span class="fn">fit</span>(data[<span class="st">"ARIMA011"</span>])
+
+h = <span class="nb">10</span>
+res = results.<span class="fn">resid</span>()
+
+<span class="cm"># Bootstrap: 1000 remuestreos de los residuales</span>
+my_samples = []
+<span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1000</span>):
+    x = np.random.<span class="fn">choice</span>(res, size=h, replace=<span class="kw">True</span>)
+    my_samples.<span class="fn">append</span>(x)
+
+<span class="cm"># Cuantiles acumulados para intervalos</span>
+q1 = np.<span class="fn">quantile</span>(my_samples, <span class="nb">0.025</span>, axis=<span class="nb">0</span>)
+q2 = np.<span class="fn">quantile</span>(my_samples, <span class="nb">0.975</span>, axis=<span class="nb">0</span>)
+
+fore = results.<span class="fn">predict</span>(h, return_conf_int=<span class="kw">False</span>)
+
+preds = pd.<span class="fn">DataFrame</span>({
+    <span class="st">'Point_forecast'</span>: fore,
+    <span class="st">'lower_95'</span>: fore + np.<span class="fn">cumsum</span>(q1),
+    <span class="st">'upper_95'</span>: fore + np.<span class="fn">cumsum</span>(q2)
+})
+<span class="fn">print</span>(preds)</pre>
+    </div>
+
+    <div class="output-block"><span class="output-label">Salida — Intervalos Bootstrap</span>
+   Point_forecast   lower_95   upper_95
+0       44.095552  41.985087  46.101812
+1       44.532142  40.311213  48.545078
+2       44.968731  38.637338  50.987928
+3       45.405321  37.028802  53.430778
+4       45.841911  35.354928  55.873628
+5       46.278501  33.681053  58.294928
+...</div>
+
+    <p>Noten que los intervalos bootstrap se ensanchan con el horizonte de pronóstico, reflejando la acumulación de incertidumbre. Esto es especialmente importante cuando los errores no son normales.</p>
+
+    <!-- 6 -->
+    <h2>6. Criterios de información</h2>
+
+    <p>Los criterios de información penalizan la complejidad del modelo para evitar sobreajuste:</p>
+
+    <div class="math-block">
+        <span class="math-label">AIC (Akaike):</span>
+        $$\text{AIC} = -2 \ln(L) + 2k$$
+        <span class="math-label">BIC (Bayesiano):</span>
+        $$\text{BIC} = -2 \ln(L) + k \ln(T)$$
+    </div>
+
+    <p>donde $L$ es la verosimilitud, $k$ el número de parámetros y $T$ el tamaño de la muestra. El BIC penaliza más los parámetros adicionales y tiende a seleccionar modelos más parsimoniosos. <code>auto_arima</code> acepta <code>information_criterion</code> = <code>"aic"</code>, <code>"aicc"</code>, <code>"bic"</code> o <code>"hqic"</code>.</p>
+
+    <div class="callout">
+        <div class="callout-title">Ejercicio propuesto</div>
+        <p>Empleando la información del <strong>número de ocupados</strong> en miles de personas (<code>Ocupados</code>) para las 13 principales ciudades de Colombia, encuentre el mejor pronóstico para los próximos 6 meses empleando los métodos ARIMA. Compare los resultados con el mejor modelo encontrado en ejercicios anteriores (suavizamiento y regresión).</p>
+    </div>
+
+    <div class="references">
+        <h2>Referencias</h2>
+        <ul class="ref-list">
+            <li>Alonso, J. C. (2020). <em>Introducción a los pronósticos con modelos estadístico de series de tiempo</em>. Caps. 8 y 9. Universidad Icesi.</li>
+            <li>Box, G. E. P. & Jenkins, G. M. (1976). <em>Time Series Analysis: Forecasting and Control</em>. Holden-Day.</li>
+            <li>Hyndman, R. J. & Khandakar, Y. (2008). Automatic time series forecasting: the forecast package for R. <em>J. Statistical Software</em>, 27(3).</li>
+            <li>Hyndman, R. J. & Athanasopoulos, G. (2021). <em>FPP3</em>. Cap. 9. <a href="https://otexts.com/fpp3/arima.html">otexts.com/fpp3</a></li>
+            <li>Smith, T. G. et al. <em>pmdarima: ARIMA estimators for Python</em>. <a href="https://alkaline-ml.com/pmdarima/">alkaline-ml.com/pmdarima</a></li>
+            <li>Statsmodels. <em>SARIMAX</em>. <a href="https://www.statsmodels.org/stable/statespace.html">statsmodels.org</a></li>
+        </ul>
+    </div>
+
+    <footer class="page-footer">Curso de Series de Tiempo · Universidad Javeriana Cali · Python con <code>pmdarima</code> y <code>statsmodels</code></footer>
+</div>
+</body>
+</html>

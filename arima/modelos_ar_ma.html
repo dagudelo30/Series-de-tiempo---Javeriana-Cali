@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelos AR y MA — Series de Tiempo en Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}]});"></script>
+    <style>
+        :root {
+            --bg: #fdfbf7;
+            --bg-alt: #f5f0e8;
+            --text: #2c2c2c;
+            --text-muted: #6b6560;
+            --accent: #b8540c;
+            --accent-light: #e8a86d;
+            --accent-bg: #fef6ee;
+            --code-bg: #1e1e2e;
+            --code-text: #cdd6f4;
+            --code-comment: #6c7086;
+            --code-keyword: #cba6f7;
+            --code-string: #a6e3a1;
+            --code-function: #89b4fa;
+            --code-number: #fab387;
+            --border: #e0d8ce;
+            --shadow: rgba(44, 44, 44, 0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Source Sans 3', Georgia, serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.78; font-size: 17.5px;
+            -webkit-font-smoothing: antialiased;
+        }
+        .page-wrapper { max-width: 860px; margin: 0 auto; padding: 2rem 2rem 5rem; }
+        .page-header { border-bottom: 3px solid var(--accent); padding-bottom: 2rem; margin-bottom: 3rem; position: relative; }
+        .page-header::after { content: ''; position: absolute; bottom: -3px; left: 0; width: 120px; height: 3px; background: var(--accent-light); }
+        .breadcrumb { font-size: 0.82rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+        h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 2.5rem; font-weight: 700; line-height: 1.15; margin-bottom: 0.6rem; }
+        h1 em { font-style: italic; color: var(--accent); }
+        .subtitle { font-size: 1.12rem; color: var(--text-muted); font-weight: 300; max-width: 620px; }
+        .meta-line { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.8rem; }
+        .meta-line a { color: var(--accent); text-decoration: none; }
+        h2 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 700; margin-top: 2.8rem; margin-bottom: 1rem; padding-left: 1rem; border-left: 4px solid var(--accent); }
+        h3 { font-family: 'Source Sans 3', sans-serif; font-size: 1.15rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1.1rem; }
+        strong { font-weight: 600; }
+        code { font-family: 'Fira Code', monospace; font-size: 0.88em; background: var(--bg-alt); padding: 0.15em 0.4em; border-radius: 4px; }
+        .callout { background: var(--accent-bg); border-left: 4px solid var(--accent); padding: 1.2rem 1.5rem; margin: 1.5rem 0; border-radius: 0 8px 8px 0; }
+        .callout-title { font-weight: 700; font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 0.4rem; }
+        .callout p:last-child { margin-bottom: 0; }
+        .callout.info { background: #eef4fb; border-left-color: #4a7fb5; }
+        .callout.info .callout-title { color: #4a7fb5; }
+        .callout.warn { background: #fef9ee; border-left-color: #c9960c; }
+        .callout.warn .callout-title { color: #a07b0a; }
+        .math-block { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 1.3rem 1.8rem; margin: 1.5rem 0; overflow-x: auto; }
+        .math-label { font-family: 'Source Sans 3', sans-serif; font-weight: 600; color: var(--accent); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; margin-top: 0.6rem; }
+        .math-label:first-child { margin-top: 0; }
+        .code-block { background: var(--code-bg); border-radius: 10px; margin: 1.5rem 0; overflow: hidden; box-shadow: 0 4px 20px var(--shadow); }
+        .code-header { background: #181825; padding: 0.55rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid #313244; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.r { background: #f38ba8; } .dot.y { background: #f9e2af; } .dot.g { background: #a6e3a1; }
+        .code-lang { margin-left: auto; font-size: 0.73rem; color: var(--code-comment); font-family: 'Fira Code', monospace; letter-spacing: 0.05em; }
+        .code-block pre { padding: 1.1rem 1.4rem; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 0.86rem; line-height: 1.7; color: var(--code-text); white-space: pre; margin: 0; }
+        .cm { color: #6c7086; font-style: italic; } .kw { color: #cba6f7; } .st { color: #a6e3a1; }
+        .fn { color: #89b4fa; } .nb { color: #fab387; } .op { color: #89dceb; }
+        .output-block { background: #f8f8f5; border: 1px solid var(--border); border-radius: 0 0 8px 8px; padding: 0.9rem 1.3rem; margin: -0.8rem 0 1.5rem; font-family: 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.55; color: var(--text-muted); overflow-x: auto; border-top: 2px dashed var(--border); white-space: pre; }
+        .output-label { font-family: 'Source Sans 3', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.3rem; display: block; font-weight: 600; white-space: normal; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.93rem; }
+        thead th { background: var(--accent); color: #fff; font-weight: 600; padding: 0.65rem 0.9rem; text-align: left; font-size: 0.86rem; }
+        thead th:first-child { border-radius: 8px 0 0 0; } thead th:last-child { border-radius: 0 8px 0 0; }
+        tbody td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--border); }
+        tbody tr:hover { background: var(--accent-bg); }
+        .best-row { background: #eef9ee; font-weight: 600; }
+        .references { margin-top: 3rem; padding-top: 2rem; border-top: 2px solid var(--border); }
+        .references h2 { border-left: none; padding-left: 0; font-size: 1.35rem; }
+        .ref-list { list-style: none; padding: 0; }
+        .ref-list li { padding: 0.45rem 0 0.45rem 1.5rem; position: relative; font-size: 0.91rem; line-height: 1.55; color: var(--text-muted); }
+        .ref-list li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+        .ref-list a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent-light); }
+        .ref-list a:hover { border-bottom-style: solid; }
+        .page-footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--text-muted); text-align: center; }
+        @media (max-width: 640px) {
+            body { font-size: 16px; } .page-wrapper { padding: 1.2rem 1rem 3rem; }
+            h1 { font-size: 1.8rem; } h2 { font-size: 1.3rem; }
+            .code-block pre { font-size: 0.78rem; padding: 0.9rem; }
+        }
+        </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="breadcrumb">Series de Tiempo · Módulo 4 · Capítulos 6 y 7</div>
+        <h1>Modelos <em>Autoregresivos (AR)</em> y de <em>Media Móvil (MA)</em></h1>
+        <p class="subtitle">Las dos familias fundamentales de procesos estocásticos para series de tiempo: propiedades teóricas, simulaciones y funciones de autocorrelación en Python</p>
+        <p class="meta-line"><a href="https://github.com/dagudelo30/Series-de-tiempo---Javeriana-Cali" target="_blank">Repositorio del curso</a></p>
+    </header>
+
+    <!-- ═══ 1 ═══ -->
+    <h2>1. Modelos Autoregresivos — AR(p)</h2>
+
+    <p>La familia AR supone que el valor actual de la serie depende linealmente de sus propios valores pasados. Un proceso <strong>AR(p)</strong> tiene la forma:</p>
+
+    <div class="math-block">
+        $$y_t = \delta + \phi_1 y_{t-1} + \phi_2 y_{t-2} + \cdots + \phi_p y_{t-p} + \varepsilon_t = \delta + \sum_{i=1}^{p} \phi_i y_{t-i} + \varepsilon_t$$
+    </div>
+
+    <p>donde $\delta$ es una constante, $\phi_1, \ldots, \phi_p$ son los coeficientes autoregresivos y $\varepsilon_t$ es ruido blanco.</p>
+
+    <h3>1.1 Proceso AR(1)</h3>
+
+    <p>El caso más simple: $y_t = \delta + \phi_1 y_{t-1} + \varepsilon_t$. Sustituyendo recursivamente, se obtiene la representación de media móvil infinita:</p>
+
+    <div class="math-block">
+        $$y_t = \frac{\delta}{1 - \phi_1} + \sum_{i=0}^{\infty} \phi_1^i \varepsilon_{t-i}$$
+    </div>
+
+    <p>De aquí se derivan las propiedades fundamentales:</p>
+
+    <div class="math-block">
+        <span class="math-label">Media:</span>
+        $$E[y_t] = \frac{\delta}{1 - \phi_1} = \mu$$
+        <span class="math-label">Varianza:</span>
+        $$\text{Var}[y_t] = \frac{\sigma_\varepsilon^2}{1 - \phi_1^2} = \gamma_0$$
+        <span class="math-label">Autocovarianza al rezago s:</span>
+        $$\gamma_s = \phi_1^s \cdot \gamma_0$$
+        <span class="math-label">Autocorrelación (ACF):</span>
+        $$\rho_s = \phi_1^s$$
+    </div>
+
+    <div class="callout">
+        <div class="callout-title">Condición de estacionariedad</div>
+        <p>El proceso AR(1) es estacionario si y solo si $|\phi_1| < 1$. Equivalentemente, la raíz del polinomio característico $1 - \phi_1 z = 0$ debe estar fuera del círculo unitario: $|z| = |1/\phi_1| > 1$. Si $|\phi_1| \geq 1$, los choques se acumulan sin límite y la serie no es estacionaria (Alonso, 2020).</p>
+    </div>
+
+    <p>Una propiedad clave es la <strong>reversión a la media</strong> (<em>mean reverting</em>): sin importar la magnitud de la perturbación, el proceso siempre tiende a regresar a su media $\mu$.</p>
+
+    <h3>1.2 Simulación de procesos AR(1) en Python</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> plt
+
+np.random.<span class="fn">seed</span>(<span class="nb">123</span>)
+T = <span class="nb">100</span>
+phis = [<span class="nb">0.25</span>, -<span class="nb">0.25</span>, <span class="nb">0.5</span>, -<span class="nb">0.5</span>, <span class="nb">0.9</span>, -<span class="nb">0.9</span>]
+eps = np.random.<span class="fn">normal</span>(<span class="nb">0</span>, <span class="nb">1</span>, T)
+
+<span class="kw">def</span> <span class="fn">sim_ar1</span>(phi, eps):
+    y = np.<span class="fn">zeros_like</span>(eps)
+    <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">range</span>(<span class="nb">1</span>, <span class="fn">len</span>(eps)):
+        y[t] = phi * y[t-<span class="nb">1</span>] + eps[t]
+    <span class="kw">return</span> y
+
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">3</span>, <span class="nb">2</span>, figsize=(<span class="nb">10</span>, <span class="nb">8</span>), sharex=<span class="kw">True</span>)
+<span class="kw">for</span> ax, phi <span class="kw">in</span> <span class="fn">zip</span>(axes.ravel(), phis):
+    y = <span class="fn">sim_ar1</span>(phi, eps)
+    ax.<span class="fn">plot</span>(y, lw=<span class="nb">0.8</span>)
+    ax.<span class="fn">set_title</span>(<span class="st">f'φ₁ = {phi}'</span>)
+    ax.<span class="fn">axhline</span>(<span class="nb">0</span>, color=<span class="st">'gray'</span>, ls=<span class="st">'--'</span>, lw=<span class="nb">0.5</span>)
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <h3>1.3 ACF teórica del AR(1)</h3>
+
+    <p>La ACF del AR(1) es $\rho_s = \phi_1^s$: decae exponencialmente si $\phi_1 > 0$, y de manera oscilante si $\phi_1 < 0$.</p>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre>max_lag = <span class="nb">25</span>
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">3</span>, <span class="nb">2</span>, figsize=(<span class="nb">10</span>, <span class="nb">8</span>), sharex=<span class="kw">True</span>, sharey=<span class="kw">True</span>)
+<span class="kw">for</span> ax, phi <span class="kw">in</span> <span class="fn">zip</span>(axes.ravel(), phis):
+    lags = np.<span class="fn">arange</span>(<span class="nb">0</span>, max_lag + <span class="nb">1</span>)
+    acf_vals = phi ** lags   <span class="cm"># ρ_s = φ^s</span>
+    ax.<span class="fn">vlines</span>(lags, <span class="nb">0</span>, acf_vals, linewidth=<span class="nb">1</span>)
+    ax.<span class="fn">scatter</span>(lags, acf_vals, s=<span class="nb">10</span>)
+    ax.<span class="fn">set_title</span>(<span class="st">f'ACF teórica: φ₁ = {phi}'</span>)
+    ax.<span class="fn">axhline</span>(<span class="nb">0</span>, color=<span class="st">'black'</span>, lw=<span class="nb">0.5</span>)
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <h3>1.4 Proceso AR(2)</h3>
+
+    <p>Un AR(2) tiene la forma $y_t = \delta + \phi_1 y_{t-1} + \phi_2 y_{t-2} + \varepsilon_t$. La condición de estacionariedad requiere que ambas raíces del polinomio característico $1 - \phi_1 z - \phi_2 z^2 = 0$ estén fuera del círculo unitario. Una condición necesaria (pero no suficiente) es $\phi_1 + \phi_2 < 1$.</p>
+
+    <!-- ═══ 2 ═══ -->
+    <h2>2. Modelos de Media Móvil — MA(q)</h2>
+
+    <p>La familia MA supone que el valor actual depende linealmente de los <strong>errores pasados</strong> (no de los valores pasados de la serie). Un proceso <strong>MA(q)</strong> tiene la forma:</p>
+
+    <div class="math-block">
+        $$y_t = \delta + \theta_1 \varepsilon_{t-1} + \theta_2 \varepsilon_{t-2} + \cdots + \theta_q \varepsilon_{t-q} + \varepsilon_t = \delta + \sum_{i=1}^{q} \theta_i \varepsilon_{t-i} + \varepsilon_t$$
+    </div>
+
+    <h3>2.1 Proceso MA(1)</h3>
+
+    <p>El MA(1): $y_t = \delta + \theta_1 \varepsilon_{t-1} + \varepsilon_t$. Sus propiedades:</p>
+
+    <div class="math-block">
+        <span class="math-label">Media:</span>
+        $$E[y_t] = \delta = \mu$$
+        <span class="math-label">Varianza:</span>
+        $$\gamma_0 = \sigma_\varepsilon^2(1 + \theta_1^2)$$
+        <span class="math-label">ACF:</span>
+        $$\rho_s = \begin{cases} 1 & s = 0 \\ \frac{\theta_1}{1 + \theta_1^2} & s = 1 \\ 0 & s \geq 2 \end{cases}$$
+    </div>
+
+    <div class="callout info">
+        <div class="callout-title">MA siempre estacionario</div>
+        <p><strong>Todo proceso MA(q) es estacionario</strong>, sin importar los valores de $\theta_1, \ldots, \theta_q$. No se necesita ninguna restricción sobre los parámetros. Esto contrasta con los AR, donde sí hay condiciones de estacionariedad.</p>
+    </div>
+
+    <p>La propiedad distintiva de un MA(q) es que su ACF se <strong>trunca</strong> después del rezago $q$: es exactamente cero para $s > q$. Esto permite identificar el orden $q$ observando la ACF muestral.</p>
+
+    <!-- ═══ 3 ═══ -->
+    <h2>3. ACF vs PACF: Identificación de modelos</h2>
+
+    <p>La función de <strong>autocorrelación parcial (PACF)</strong> mide la correlación entre $y_t$ y $y_{t-s}$ después de eliminar el efecto de los rezagos intermedios. Es equivalente al coeficiente $\phi_s^{(s)}$ en la regresión:</p>
+
+    <div class="math-block">
+        $$y_t - \mu = \phi_1^{(s)}(y_{t-1} - \mu) + \phi_2^{(s)}(y_{t-2} - \mu) + \cdots + \phi_s^{(s)}(y_{t-s} - \mu)$$
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Proceso</th><th>ACF</th><th>PACF</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>AR(p)</strong></td><td>Decae exponencialmente (o de forma oscilante)</td><td>Se trunca después del rezago p</td></tr>
+            <tr><td><strong>MA(q)</strong></td><td>Se trunca después del rezago q</td><td>Decae exponencialmente (o de forma oscilante)</td></tr>
+            <tr><td><strong>ARMA(p,q)</strong></td><td>Decae exponencialmente después de q</td><td>Decae exponencialmente después de p</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout">
+        <div class="callout-title">Regla práctica para identificación</div>
+        <p>Si la ACF se corta abruptamente después de $q$ rezagos → probable <strong>MA(q)</strong>. Si la PACF se corta después de $p$ rezagos → probable <strong>AR(p)</strong>. Si ambas decaen gradualmente → probable <strong>ARMA(p,q)</strong>. En la práctica esto es difícil de determinar visualmente, por eso se complementa con selección automática por criterios de información (Capítulos 8-9).</p>
+    </div>
+
+    <h3>3.1 Cálculo de ACF y PACF en Python</h3>
+
+    <div class="code-block">
+        <div class="code-header"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="code-lang">python</span></div>
+        <pre><span class="kw">from</span> statsmodels.graphics.tsaplots <span class="kw">import</span> plot_acf, plot_pacf
+
+<span class="cm"># Ejemplo: calcular ACF y PACF de una serie</span>
+fig, axes = plt.<span class="fn">subplots</span>(<span class="nb">1</span>, <span class="nb">2</span>, figsize=(<span class="nb">12</span>, <span class="nb">4</span>))
+<span class="fn">plot_acf</span>(data[<span class="st">'ARIMA011'</span>], lags=<span class="nb">40</span>, ax=axes[<span class="nb">0</span>])
+<span class="fn">plot_pacf</span>(data[<span class="st">'ARIMA011'</span>], lags=<span class="nb">40</span>, ax=axes[<span class="nb">1</span>])
+plt.<span class="fn">tight_layout</span>(); plt.<span class="fn">show</span>()</pre>
+    </div>
+
+    <!-- ═══ 4 ═══ -->
+    <h2>4. Resumen comparativo</h2>
+
+    <table>
+        <thead>
+            <tr><th>Propiedad</th><th>AR(p)</th><th>MA(q)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Depende de</td><td>Valores pasados de $y_t$</td><td>Errores pasados $\varepsilon_t$</td></tr>
+            <tr><td>Estacionariedad</td><td>Requiere $|\text{raíces}| > 1$</td><td>Siempre estacionario</td></tr>
+            <tr><td>ACF</td><td>Decae gradualmente</td><td>Se trunca en rezago $q$</td></tr>
+            <tr><td>PACF</td><td>Se trunca en rezago $p$</td><td>Decae gradualmente</td></tr>
+            <tr><td>Reversión a la media</td><td>Sí (si estacionario)</td><td>Sí</td></tr>
+            <tr><td>Parámetros</td><td>$\phi_1, \ldots, \phi_p$</td><td>$\theta_1, \ldots, \theta_q$</td></tr>
+        </tbody>
+    </table>
+
+    <div class="references">
+        <h2>Referencias</h2>
+        <ul class="ref-list">
+            <li>Alonso, J. C. (2020). <em>Introducción a los pronósticos con modelos estadístico de series de tiempo</em>. Cap. 6 y 7. Universidad Icesi.</li>
+            <li>Box, G. E. P. & Jenkins, G. M. (1976). <em>Time Series Analysis: Forecasting and Control</em>. Holden-Day.</li>
+            <li>Hamilton, J. D. (1994). <em>Time Series Analysis</em>. Princeton University Press.</li>
+            <li>Hyndman, R. J. & Athanasopoulos, G. (2021). <em>FPP3</em>. Cap. 9. <a href="https://otexts.com/fpp3/arima.html">otexts.com/fpp3</a></li>
+            <li>Statsmodels. <em>Time Series Analysis</em>. <a href="https://www.statsmodels.org/stable/tsa.html">statsmodels.org</a></li>
+        </ul>
+    </div>
+
+    <footer class="page-footer">Curso de Series de Tiempo · Universidad Javeriana Cali · Python con <code>statsmodels</code></footer>
+</div>
+</body>
+</html>
